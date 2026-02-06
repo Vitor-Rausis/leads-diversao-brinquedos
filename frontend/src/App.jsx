@@ -10,6 +10,7 @@ import LeadDetailPage from './pages/LeadDetailPage';
 import MessagesPage from './pages/MessagesPage';
 import ReportsPage from './pages/ReportsPage';
 import SettingsPage from './pages/SettingsPage';
+import MessageConfigPage from './pages/MessageConfigPage';
 import NotFoundPage from './pages/NotFoundPage';
 
 export default function App() {
@@ -34,6 +35,7 @@ export default function App() {
               <Route path="/messages" element={<MessagesPage />} />
               <Route path="/reports" element={<ReportsPage />} />
               <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/config/messages" element={<MessageConfigPage />} />
             </Route>
           </Route>
           <Route path="*" element={<NotFoundPage />} />

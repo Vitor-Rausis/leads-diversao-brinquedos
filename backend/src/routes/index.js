@@ -9,6 +9,7 @@ const dashboardRoutes = require('./dashboardRoutes');
 const publicRoutes = require('./publicRoutes');
 const webhookRoutes = require('./webhookRoutes');
 const settingsRoutes = require('./settingsRoutes');
+const configRoutes = require('./configRoutes');
 
 router.use('/auth', authRoutes);
 router.use('/leads', leadRoutes);
@@ -18,5 +19,6 @@ router.use('/dashboard', dashboardRoutes);
 router.use('/public', publicRoutes);
 router.use('/webhook', webhookRoutes);
 router.use('/settings', settingsRoutes);
+router.use('/config', configRoutes);
 
 module.exports = router;

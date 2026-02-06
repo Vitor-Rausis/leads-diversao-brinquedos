@@ -141,22 +141,47 @@ CREATE TABLE relatorios (
 );
 
 -- ============================================================
+-- CONFIGURACOES_MENSAGEM (agendamento customizavel)
+-- ============================================================
+CREATE TABLE configuracoes_mensagem (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    tipo mensagem_tipo UNIQUE NOT NULL,
+    dias INT NOT NULL,
+    hora TIME NOT NULL DEFAULT '09:00',
+    ativo BOOLEAN DEFAULT TRUE,
+    atualizado_em TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Seed configuracoes padrao
+INSERT INTO configuracoes_mensagem (tipo, dias, hora) VALUES
+('dia_3', 3, '09:00'),
+('dia_7', 7, '09:00'),
+('mes_10', 300, '09:00');
+
+CREATE TRIGGER trg_config_msg_atualizar_timestamp
+    BEFORE UPDATE ON configuracoes_mensagem
+    FOR EACH ROW
+    EXECUTE FUNCTION fn_atualizar_timestamp();
+
+-- ============================================================
 -- TRIGGER: Criar mensagens agendadas automaticamente
 -- ============================================================
 CREATE OR REPLACE FUNCTION fn_criar_mensagens_agendadas()
 RETURNS TRIGGER AS $$
+DECLARE
+    config RECORD;
+    data_envio TIMESTAMPTZ;
 BEGIN
-    -- 3 dias apos cadastro
-    INSERT INTO mensagens_agendadas (lead_id, tipo, data_agendada)
-    VALUES (NEW.id, 'dia_3', NEW.data_cadastro + INTERVAL '3 days');
+    -- Loop pelas configuracoes ativas
+    FOR config IN
+        SELECT tipo, dias, hora FROM configuracoes_mensagem WHERE ativo = TRUE
+    LOOP
+        -- Calcula a data de envio: data_cadastro + dias, no horario configurado
+        data_envio := (NEW.data_cadastro::DATE + config.dias * INTERVAL '1 day') + config.hora;
 
-    -- 7 dias apos cadastro
-    INSERT INTO mensagens_agendadas (lead_id, tipo, data_agendada)
-    VALUES (NEW.id, 'dia_7', NEW.data_cadastro + INTERVAL '7 days');
-
-    -- 10 meses apos cadastro
-    INSERT INTO mensagens_agendadas (lead_id, tipo, data_agendada)
-    VALUES (NEW.id, 'mes_10', NEW.data_cadastro + INTERVAL '10 months');
+        INSERT INTO mensagens_agendadas (lead_id, tipo, data_agendada)
+        VALUES (NEW.id, config.tipo, data_envio);
+    END LOOP;
 
     RETURN NEW;
 END;
@@ -207,3 +232,4 @@ CREATE POLICY "Service role full access" ON users FOR ALL USING (TRUE) WITH CHEC
 CREATE POLICY "Service role full access" ON api_keys FOR ALL USING (TRUE) WITH CHECK (TRUE);
 CREATE POLICY "Service role full access" ON relatorios FOR ALL USING (TRUE) WITH CHECK (TRUE);
 CREATE POLICY "Service role full access" ON templates_mensagem FOR ALL USING (TRUE) WITH CHECK (TRUE);
+CREATE POLICY "Service role full access" ON configuracoes_mensagem FOR ALL USING (TRUE) WITH CHECK (TRUE);

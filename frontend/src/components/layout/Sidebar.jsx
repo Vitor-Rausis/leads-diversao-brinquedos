@@ -8,6 +8,7 @@ import {
   LogOut,
   X,
   Puzzle,
+  CalendarClock,
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import clsx from 'clsx';
@@ -17,6 +18,7 @@ const navItems = [
   { to: '/leads', icon: Users, label: 'Leads' },
   { to: '/messages', icon: MessageSquare, label: 'Mensagens' },
   { to: '/reports', icon: BarChart3, label: 'Relatorios' },
+  { to: '/config/messages', icon: CalendarClock, label: 'Agendamentos' },
   { to: '/settings', icon: Settings, label: 'Configuracoes' },
 ];
 
