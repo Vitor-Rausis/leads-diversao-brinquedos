@@ -39,6 +39,14 @@ app.get('/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().
 // Serve frontend static files in production (before rate limit)
 if (env.NODE_ENV === 'production') {
   const frontendPath = path.join(__dirname, '../../frontend/dist');
+  console.log('Frontend path:', frontendPath);
+  console.log('__dirname:', __dirname);
+
+  const fs = require('fs');
+  if (fs.existsSync(frontendPath)) {
+    console.log('Dist contents:', fs.readdirSync(frontendPath));
+  }
+
   app.use(express.static(frontendPath));
 }
 
