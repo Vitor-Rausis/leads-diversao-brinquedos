@@ -10,6 +10,9 @@ const env = require('./config/env');
 
 const app = express();
 
+// Trust proxy for Render/Railway/etc
+app.set('trust proxy', 1);
+
 // Security
 app.use(helmet({
   contentSecurityPolicy: false,
@@ -30,26 +33,25 @@ if (env.NODE_ENV !== 'test') {
   app.use(morgan('combined'));
 }
 
-// General rate limit
-app.use(generalLimiter);
+// Health check (before rate limit)
+app.get('/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
+
+// Serve frontend static files in production (before rate limit)
+if (env.NODE_ENV === 'production') {
+  const frontendPath = path.join(__dirname, '../../frontend/dist');
+  app.use(express.static(frontendPath));
+}
+
+// General rate limit (only for API routes)
+app.use('/api', generalLimiter);
 
 // API Routes
 app.use('/api/v1', routes);
 
-// Health check
-app.get('/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
-
-// Serve frontend static files in production
+// SPA fallback - serve index.html for all non-API routes (production only)
 if (env.NODE_ENV === 'production') {
   const frontendPath = path.join(__dirname, '../../frontend/dist');
-  app.use(express.static(frontendPath));
-
-  // SPA fallback - serve index.html for all non-API routes
-  app.get('*', (req, res, next) => {
-    // Skip API routes
-    if (req.path.startsWith('/api/')) {
-      return next();
-    }
+  app.get('*', (req, res) => {
     res.sendFile(path.join(frontendPath, 'index.html'));
   });
 }
