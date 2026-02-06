@@ -14,9 +14,9 @@ services:
         sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
-      - key: EVOLUTION_API_URL
+      - key: ZAPI_INSTANCE_ID
         sync: false
-      - key: EVOLUTION_API_INSTANCE
+      - key: ZAPI_TOKEN
         sync: false
-      - key: EVOLUTION_API_KEY
+      - key: ZAPI_SECURITY_TOKEN
         sync: false
