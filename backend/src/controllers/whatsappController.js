@@ -2,6 +2,10 @@ const whatsappService = require('../services/whatsappService');
 
 async function getStatus(req, res) {
   const status = await whatsappService.checkStatus();
+  // Inclui QR code diretamente no status para evitar race condition
+  if (status.hasQR && whatsappService.qrCode) {
+    status.qrCode = whatsappService.qrCode;
+  }
   res.json(status);
 }
 
@@ -20,12 +24,21 @@ async function disconnect(req, res) {
 }
 
 async function reconnect(req, res) {
-  await whatsappService.disconnect();
-  // Aguarda um pouco antes de reinicializar
-  setTimeout(() => {
-    whatsappService.client = null;
-    whatsappService.initialize();
-  }, 2000);
+  // Fecha conexao sem fazer logout (preserva sessao)
+  if (whatsappService.sock) {
+    try {
+      whatsappService.sock.end();
+    } catch (e) {
+      // ignore
+    }
+    whatsappService.sock = null;
+  }
+  whatsappService.status = 'disconnected';
+  whatsappService.qrCode = null;
+  whatsappService.errorMessage = null;
+
+  // Reinicializa
+  await whatsappService.initialize();
   res.json({ ok: true, message: 'Reconectando WhatsApp...' });
 }
 

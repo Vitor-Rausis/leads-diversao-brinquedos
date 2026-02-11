@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { getApiKeys, createApiKey, deactivateApiKey } from '../api/settingsApi';
-import { getWhatsAppStatus, getWhatsAppQR, disconnectWhatsApp, reconnectWhatsApp } from '../api/whatsappApi';
+import { getWhatsAppStatus, disconnectWhatsApp, reconnectWhatsApp } from '../api/whatsappApi';
 import { Key, Plus, Copy, XCircle, Smartphone, Wifi, WifiOff, RefreshCw, QrCode, Loader2 } from 'lucide-react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
@@ -49,10 +49,9 @@ export default function SettingsPage() {
       const res = await getWhatsAppStatus();
       setWaStatus(res.data);
 
-      // Se tem QR disponivel, busca
-      if (res.data.hasQR && res.data.status === 'qr') {
-        const qrRes = await getWhatsAppQR();
-        setQrCode(qrRes.data.qrCode);
+      // QR code vem direto no status response
+      if (res.data.qrCode) {
+        setQrCode(res.data.qrCode);
       } else {
         setQrCode(null);
       }

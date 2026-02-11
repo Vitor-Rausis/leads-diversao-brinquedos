@@ -4,8 +4,8 @@ const MessageModel = require('../models/messageModel');
 const logger = require('../utils/logger');
 
 /**
- * Processa mensagens recebidas do WhatsApp via whatsapp-web.js
- * Chamado diretamente pelo evento client.on('message') no server.js
+ * Processa mensagens recebidas do WhatsApp via Baileys
+ * Chamado diretamente pelo evento messages.upsert no server.js
  */
 async function handleIncomingMessage(msg) {
   try {
@@ -15,8 +15,8 @@ async function handleIncomingMessage(msg) {
     // Ignora mensagens enviadas por nos
     if (msg.fromMe) return;
 
-    // Extrai numero do chatId (formato: 5511999999999@c.us)
-    const whatsapp = msg.from.replace('@c.us', '');
+    // Extrai numero do chatId (formato: 5511999999999@s.whatsapp.net ou @c.us)
+    const whatsapp = msg.from.replace('@s.whatsapp.net', '').replace('@c.us', '');
 
     // Extrai conteudo
     const content = msg.body || (msg.hasMedia ? '[media]' : '[vazio]');
@@ -65,7 +65,7 @@ async function handleIncomingMessage(msg) {
  * Endpoint de webhook (mantido para compatibilidade/testes)
  */
 async function handleWhatsAppWebhook(req, res) {
-  return res.status(200).json({ ok: true, message: 'Webhook ativo (mensagens processadas via whatsapp-web.js)' });
+  return res.status(200).json({ ok: true, message: 'Webhook ativo (mensagens processadas via Baileys)' });
 }
 
 module.exports = { handleWhatsAppWebhook, handleIncomingMessage };
