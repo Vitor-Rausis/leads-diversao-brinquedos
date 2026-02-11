@@ -141,7 +141,7 @@ export default function SettingsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Configuracoes</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Configurações</h1>
         <p className="text-sm text-gray-500 mt-1">Gerencie WhatsApp e API keys</p>
       </div>
 
@@ -203,7 +203,7 @@ export default function SettingsPage() {
         {waStatus.status === 'initializing' && (
           <div className="flex flex-col items-center py-6 border-t border-gray-100">
             <Loader2 className="w-8 h-8 text-blue-500 animate-spin mb-3" />
-            <p className="text-sm text-gray-500">Inicializando WhatsApp (pode levar ate 30s)...</p>
+            <p className="text-sm text-gray-500">Inicializando WhatsApp (pode levar até 30s)...</p>
           </div>
         )}
 
@@ -221,7 +221,7 @@ export default function SettingsPage() {
             <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg">
               <Wifi className="w-4 h-4 text-green-600" />
               <p className="text-sm text-green-700">
-                WhatsApp conectado e pronto para enviar mensagens automaticas!
+                WhatsApp conectado e pronto para enviar mensagens automáticas!
               </p>
             </div>
           </div>
@@ -261,7 +261,7 @@ export default function SettingsPage() {
           <div>
             <h2 className="text-base font-semibold text-gray-800">API Keys</h2>
             <p className="text-sm text-gray-500 mt-0.5">
-              Use API keys para enviar leads via formulario externo
+              Use API keys para enviar leads via formulário externo
             </p>
           </div>
           <Button size="sm" onClick={() => setShowForm(!showForm)}>
@@ -273,7 +273,7 @@ export default function SettingsPage() {
         {showForm && (
           <form onSubmit={handleCreate} className="flex items-end gap-3 mb-6 p-4 bg-gray-50 rounded-lg">
             <Input
-              label="Descricao"
+              label="Descrição"
               value={descricao}
               onChange={(e) => setDescricao(e.target.value)}
               placeholder="Ex: Formulario do site principal"
@@ -290,7 +290,7 @@ export default function SettingsPage() {
           <EmptyState
             icon={Key}
             title="Nenhuma API key criada"
-            description="Crie uma API key para integrar formularios externos"
+            description="Crie uma API key para integrar formulários externos"
           />
         ) : (
           <div className="space-y-3">

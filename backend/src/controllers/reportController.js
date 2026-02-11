@@ -33,13 +33,13 @@ async function downloadCSV(req, res, next) {
   try {
     const report = await ReportModel.findById(req.params.id);
     if (!report) {
-      return res.status(404).json({ error: 'Relatorio nao encontrado' });
+      return res.status(404).json({ error: 'Relatório não encontrado' });
     }
 
     const csvData = [
       {
-        'Periodo Inicio': report.periodo_inicio,
-        'Periodo Fim': report.periodo_fim,
+        'Período Início': report.periodo_inicio,
+        'Período Fim': report.periodo_fim,
         'Total de Leads': report.total_leads,
         'Leads Novos': report.leads_novos,
         'Leads Convertidos': report.leads_convertidos,

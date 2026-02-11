@@ -85,8 +85,8 @@ export default function LeadImport({ isOpen, onClose, onSuccess }) {
         <div className="bg-gray-50 rounded-lg p-3">
           <p className="text-xs font-medium text-gray-700 mb-1">Formato esperado:</p>
           <p className="text-xs text-gray-500">
-            Colunas: <strong>nome</strong>, <strong>whatsapp</strong> (obrigatorias),{' '}
-            <strong>observacoes</strong> (opcional)
+            Colunas: <strong>nome</strong>, <strong>whatsapp</strong> (obrigatórias),{' '}
+            <strong>observações</strong> (opcional)
           </p>
         </div>
 

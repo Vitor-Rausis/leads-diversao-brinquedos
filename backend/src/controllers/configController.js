@@ -8,8 +8,8 @@ const configController = {
       const configs = await configModel.getAll();
       res.json(configs);
     } catch (error) {
-      logger.error('Erro ao buscar configuracoes:', error);
-      res.status(500).json({ error: 'Erro ao buscar configuracoes' });
+      logger.error('Erro ao buscar configurações:', error);
+      res.status(500).json({ error: 'Erro ao buscar configurações' });
     }
   },
 
@@ -49,12 +49,12 @@ const configController = {
 
       const updated = await configModel.updateAll(configs);
       res.json({
-        message: 'Configuracoes atualizadas com sucesso',
+        message: 'Configurações atualizadas com sucesso',
         configs: updated
       });
     } catch (error) {
-      logger.error('Erro ao atualizar configuracoes:', error);
-      res.status(500).json({ error: 'Erro ao atualizar configuracoes' });
+      logger.error('Erro ao atualizar configurações:', error);
+      res.status(500).json({ error: 'Erro ao atualizar configurações' });
     }
   },
 
@@ -76,7 +76,7 @@ const configController = {
       const { conteudo } = req.body;
 
       if (!conteudo) {
-        return res.status(400).json({ error: 'conteudo e obrigatorio' });
+        return res.status(400).json({ error: 'Conteúdo é obrigatório' });
       }
 
       const updated = await configModel.updateTemplate(tipo, conteudo);

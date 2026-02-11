@@ -40,7 +40,7 @@ async function me(req, res, next) {
   try {
     const user = await UserModel.findById(req.user.id);
     if (!user) {
-      return res.status(404).json({ error: 'Usuario nao encontrado' });
+      return res.status(404).json({ error: 'Usuário não encontrado' });
     }
     res.json({ user });
   } catch (err) {

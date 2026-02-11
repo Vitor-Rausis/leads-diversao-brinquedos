@@ -49,7 +49,7 @@ export default function MessagesPage() {
     <div className="space-y-4">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Mensagens</h1>
-        <p className="text-sm text-gray-500 mt-1">Historico de mensagens e agendamentos</p>
+        <p className="text-sm text-gray-500 mt-1">Histórico de mensagens e agendamentos</p>
       </div>
 
       {/* Tabs */}
@@ -60,7 +60,7 @@ export default function MessagesPage() {
             tab === 'log' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'
           }`}
         >
-          Historico
+          Histórico
         </button>
         <button
           onClick={() => { setTab('scheduled'); setPage(1); }}
@@ -108,7 +108,7 @@ export default function MessagesPage() {
           <EmptyState
             icon={tab === 'log' ? Send : Clock}
             title="Nenhuma mensagem encontrada"
-            description={tab === 'log' ? 'O historico de mensagens aparecera aqui' : 'Mensagens agendadas aparecerrao aqui'}
+            description={tab === 'log' ? 'O histórico de mensagens aparecerá aqui' : 'Mensagens agendadas aparecerão aqui'}
           />
         </Card>
       ) : tab === 'log' ? (

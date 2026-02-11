@@ -29,7 +29,7 @@ export default function MessageConfigPage() {
       setScheduleConfigs(scheduleRes.data || []);
       setTemplates(templatesRes.data || []);
     } catch (error) {
-      toast.error('Erro ao carregar configuracoes');
+      toast.error('Erro ao carregar configurações');
       console.error(error);
     } finally {
       setLoading(false);
@@ -89,8 +89,8 @@ export default function MessageConfigPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Configuracao de Mensagens</h1>
-        <p className="text-gray-600">Configure os dias, horarios e conteudo das mensagens automaticas</p>
+        <h1 className="text-2xl font-bold text-gray-900">Configuração de Mensagens</h1>
+        <p className="text-gray-600">Configure os dias, horários e conteúdo das mensagens automáticas</p>
       </div>
 
       {/* Configuracoes de Agendamento */}
@@ -144,7 +144,7 @@ export default function MessageConfigPage() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     <Calendar className="w-4 h-4 inline mr-1" />
-                    Dias apos cadastro
+                    Dias após cadastro
                   </label>
                   <input
                     type="number"
@@ -156,14 +156,14 @@ export default function MessageConfigPage() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                   />
                   <p className="text-xs text-gray-500 mt-1">
-                    {config.dias === 1 ? '1 dia' : `${config.dias} dias`} apos o cadastro do lead
+                    {config.dias === 1 ? '1 dia' : `${config.dias} dias`} após o cadastro do lead
                   </p>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     <Clock className="w-4 h-4 inline mr-1" />
-                    Horario de envio
+                    Horário de envio
                   </label>
                   <input
                     type="time"

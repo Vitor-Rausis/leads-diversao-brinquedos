@@ -17,9 +17,9 @@ const navItems = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/leads', icon: Users, label: 'Leads' },
   { to: '/messages', icon: MessageSquare, label: 'Mensagens' },
-  { to: '/reports', icon: BarChart3, label: 'Relatorios' },
+  { to: '/reports', icon: BarChart3, label: 'Relatórios' },
   { to: '/config/messages', icon: CalendarClock, label: 'Agendamentos' },
-  { to: '/settings', icon: Settings, label: 'Configuracoes' },
+  { to: '/settings', icon: Settings, label: 'Configurações' },
 ];
 
 export default function Sidebar({ open, onClose }) {
@@ -48,7 +48,7 @@ export default function Sidebar({ open, onClose }) {
               <Puzzle className="w-5 h-5" />
             </div>
             <div>
-              <h1 className="text-sm font-bold leading-tight">Diversao</h1>
+              <h1 className="text-sm font-bold leading-tight">Diversão</h1>
               <p className="text-xs text-white/60">Brinquedos</p>
             </div>
           </div>

@@ -54,7 +54,7 @@ async function handleIncomingMessage(msg) {
       // Cancel all pending scheduled messages
       await MessageModel.cancelPendingForLead(lead.id);
 
-      logger.info(`Lead ${lead.id} respondeu via WhatsApp. Automacoes pausadas.`);
+      logger.info(`Lead ${lead.id} respondeu via WhatsApp. Automações pausadas.`);
     }
   } catch (err) {
     logger.error('Erro ao processar mensagem recebida:', err);

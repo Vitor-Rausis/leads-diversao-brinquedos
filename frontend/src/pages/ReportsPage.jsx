@@ -35,19 +35,19 @@ export default function ReportsPage() {
   const handleGenerate = async (e) => {
     e.preventDefault();
     if (!periodoInicio || !periodoFim) {
-      toast.error('Informe o periodo');
+      toast.error('Informe o período');
       return;
     }
     setGenerating(true);
     try {
       await generateReport({ periodo_inicio: periodoInicio, periodo_fim: periodoFim });
-      toast.success('Relatorio gerado com sucesso');
+      toast.success('Relatório gerado com sucesso');
       setShowForm(false);
       setPeriodoInicio('');
       setPeriodoFim('');
       loadReports();
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Erro ao gerar relatorio');
+      toast.error(err.response?.data?.error || 'Erro ao gerar relatório');
     } finally {
       setGenerating(false);
     }
@@ -60,7 +60,7 @@ export default function ReportsPage() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `relatorio_${report.periodo_inicio}_${report.periodo_fim}.csv`;
+      a.download = `relatório_${report.periodo_inicio}_${report.periodo_fim}.csv`;
       a.click();
       window.URL.revokeObjectURL(url);
     } catch (err) {
@@ -74,21 +74,21 @@ export default function ReportsPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Relatorios</h1>
-          <p className="text-sm text-gray-500 mt-1">Relatorios mensais de desempenho</p>
+          <h1 className="text-2xl font-bold text-gray-900">Relatórios</h1>
+          <p className="text-sm text-gray-500 mt-1">Relatórios mensais de desempenho</p>
         </div>
         <Button onClick={() => setShowForm(!showForm)}>
           <Plus className="w-4 h-4" />
-          Gerar Relatorio
+          Gerar Relatório
         </Button>
       </div>
 
       {showForm && (
         <Card className="p-6">
-          <h3 className="text-base font-semibold text-gray-800 mb-4">Novo Relatorio</h3>
+          <h3 className="text-base font-semibold text-gray-800 mb-4">Novo Relatório</h3>
           <form onSubmit={handleGenerate} className="flex flex-col sm:flex-row items-end gap-4">
             <Input
-              label="Inicio"
+              label="Início"
               type="date"
               value={periodoInicio}
               onChange={(e) => setPeriodoInicio(e.target.value)}
@@ -114,8 +114,8 @@ export default function ReportsPage() {
         <Card>
           <EmptyState
             icon={BarChart3}
-            title="Nenhum relatorio gerado"
-            description="Clique em 'Gerar Relatorio' para criar o primeiro"
+            title="Nenhum relatório gerado"
+            description="Clique em 'Gerar Relatório' para criar o primeiro"
           />
         </Card>
       ) : (

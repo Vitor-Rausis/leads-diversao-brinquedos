@@ -24,7 +24,7 @@ async function getById(req, res, next) {
   try {
     const lead = await LeadModel.findByIdWithMessages(req.params.id);
     if (!lead) {
-      return res.status(404).json({ error: 'Lead nao encontrado' });
+      return res.status(404).json({ error: 'Lead não encontrado' });
     }
     res.json(lead);
   } catch (err) {
@@ -71,7 +71,7 @@ async function remove(req, res, next) {
 async function importFile(req, res, next) {
   try {
     if (!req.file) {
-      return res.status(400).json({ error: 'Arquivo nao enviado' });
+      return res.status(400).json({ error: 'Arquivo não enviado' });
     }
 
     const fileName = req.file.originalname.toLowerCase();
@@ -82,12 +82,12 @@ async function importFile(req, res, next) {
     } else if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
       result = CsvService.parseExcel(req.file.buffer);
     } else {
-      return res.status(400).json({ error: 'Formato nao suportado. Use CSV ou Excel.' });
+      return res.status(400).json({ error: 'Formato não suportado. Use CSV ou Excel.' });
     }
 
     if (result.leads.length === 0) {
       return res.status(400).json({
-        error: 'Nenhum lead valido encontrado no arquivo',
+        error: 'Nenhum lead válido encontrado no arquivo',
         errors: result.errors,
       });
     }
@@ -115,7 +115,7 @@ async function createPublic(req, res, next) {
     const leadData = {
       nome: req.body.nome,
       whatsapp: formatPhone(req.body.whatsapp),
-      origem: req.body.origem || 'Formulario do site',
+      origem: req.body.origem || 'Formulário do site',
       observacoes: req.body.observacoes || null,
       status: 'Novo',
     };
