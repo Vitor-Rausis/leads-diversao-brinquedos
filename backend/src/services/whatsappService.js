@@ -10,7 +10,8 @@ class WhatsAppService {
   constructor() {
     this.client = null;
     this.qrCode = null;
-    this.status = 'disconnected'; // disconnected | qr | connecting | ready
+    this.status = 'disconnected'; // disconnected | initializing | qr | connecting | ready | error
+    this.errorMessage = null;
     this.onMessageCallback = null;
   }
 
@@ -20,75 +21,94 @@ class WhatsAppService {
   initialize() {
     if (this.client) return;
 
-    this.client = new Client({
-      authStrategy: new LocalAuth({ dataPath: './whatsapp-session' }),
-      puppeteer: {
-        headless: true,
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-gpu',
-          '--single-process',
-        ],
-      },
-    });
+    this.status = 'initializing';
+    this.errorMessage = null;
+    logger.info('Inicializando WhatsApp (baixando Chromium se necessario)...');
 
-    this.client.on('qr', async (qr) => {
-      this.status = 'qr';
-      try {
-        this.qrCode = await QRCode.toDataURL(qr);
-      } catch (err) {
-        logger.error('Erro ao gerar QR code:', err);
-      }
-      logger.info('QR Code gerado. Escaneie com o WhatsApp.');
-    });
+    try {
+      this.client = new Client({
+        authStrategy: new LocalAuth({ dataPath: './whatsapp-session' }),
+        puppeteer: {
+          headless: true,
+          args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-gpu',
+            '--single-process',
+            '--no-zygote',
+          ],
+        },
+      });
 
-    this.client.on('ready', () => {
-      this.status = 'ready';
-      this.qrCode = null;
-      logger.info('WhatsApp conectado e pronto!');
-    });
-
-    this.client.on('authenticated', () => {
-      this.status = 'connecting';
-      this.qrCode = null;
-      logger.info('WhatsApp autenticado, carregando sessao...');
-    });
-
-    this.client.on('auth_failure', (msg) => {
-      this.status = 'disconnected';
-      this.qrCode = null;
-      logger.error('Falha na autenticacao WhatsApp:', msg);
-    });
-
-    this.client.on('disconnected', (reason) => {
-      this.status = 'disconnected';
-      this.qrCode = null;
-      logger.warn('WhatsApp desconectado:', reason);
-      // Tenta reconectar apos 5 segundos
-      setTimeout(() => {
-        logger.info('Tentando reconectar WhatsApp...');
-        this.client.initialize().catch((err) => {
-          logger.error('Erro ao reconectar:', err);
-        });
-      }, 5000);
-    });
-
-    // Listener para mensagens recebidas
-    this.client.on('message', async (msg) => {
-      if (this.onMessageCallback) {
+      this.client.on('qr', async (qr) => {
+        this.status = 'qr';
+        this.errorMessage = null;
         try {
-          await this.onMessageCallback(msg);
+          this.qrCode = await QRCode.toDataURL(qr);
         } catch (err) {
-          logger.error('Erro ao processar mensagem recebida:', err);
+          logger.error('Erro ao gerar QR code:', err);
         }
-      }
-    });
+        logger.info('QR Code gerado. Escaneie com o WhatsApp.');
+      });
 
-    this.client.initialize().catch((err) => {
-      logger.error('Erro ao inicializar WhatsApp:', err);
-    });
+      this.client.on('ready', () => {
+        this.status = 'ready';
+        this.qrCode = null;
+        this.errorMessage = null;
+        logger.info('WhatsApp conectado e pronto!');
+      });
+
+      this.client.on('authenticated', () => {
+        this.status = 'connecting';
+        this.qrCode = null;
+        logger.info('WhatsApp autenticado, carregando sessao...');
+      });
+
+      this.client.on('auth_failure', (msg) => {
+        this.status = 'error';
+        this.qrCode = null;
+        this.errorMessage = 'Falha na autenticacao: ' + msg;
+        logger.error('Falha na autenticacao WhatsApp:', msg);
+      });
+
+      this.client.on('disconnected', (reason) => {
+        this.status = 'disconnected';
+        this.qrCode = null;
+        logger.warn('WhatsApp desconectado:', reason);
+        // Tenta reconectar apos 10 segundos
+        setTimeout(() => {
+          logger.info('Tentando reconectar WhatsApp...');
+          this.client.initialize().catch((err) => {
+            logger.error('Erro ao reconectar:', err.message);
+            this.status = 'error';
+            this.errorMessage = err.message;
+          });
+        }, 10000);
+      });
+
+      // Listener para mensagens recebidas
+      this.client.on('message', async (msg) => {
+        if (this.onMessageCallback) {
+          try {
+            await this.onMessageCallback(msg);
+          } catch (err) {
+            logger.error('Erro ao processar mensagem recebida:', err);
+          }
+        }
+      });
+
+      this.client.initialize().catch((err) => {
+        logger.error('Erro ao inicializar WhatsApp:', err.message);
+        this.status = 'error';
+        this.errorMessage = err.message;
+      });
+    } catch (err) {
+      logger.error('Erro ao criar cliente WhatsApp:', err.message);
+      this.status = 'error';
+      this.errorMessage = err.message;
+      this.client = null;
+    }
   }
 
   /**
@@ -140,6 +160,7 @@ class WhatsAppService {
       connected: this.status === 'ready',
       status: this.status,
       hasQR: !!this.qrCode,
+      error: this.errorMessage,
     };
   }
 
@@ -160,12 +181,14 @@ class WhatsAppService {
     if (this.client) {
       try {
         await this.client.destroy();
-        this.status = 'disconnected';
-        this.qrCode = null;
-        logger.info('WhatsApp desconectado manualmente');
       } catch (err) {
-        logger.error('Erro ao desconectar WhatsApp:', err);
+        logger.error('Erro ao desconectar WhatsApp:', err.message);
       }
+      this.client = null;
+      this.status = 'disconnected';
+      this.qrCode = null;
+      this.errorMessage = null;
+      logger.info('WhatsApp desconectado manualmente');
     }
   }
 }

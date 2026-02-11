@@ -123,16 +123,20 @@ export default function SettingsPage() {
 
   const statusLabel = {
     disconnected: 'Desconectado',
+    initializing: 'Inicializando...',
     qr: 'Aguardando QR Code',
     connecting: 'Conectando...',
     ready: 'Conectado',
+    error: 'Erro',
   };
 
   const statusColor = {
     disconnected: 'text-red-500',
+    initializing: 'text-blue-500',
     qr: 'text-yellow-500',
     connecting: 'text-blue-500',
     ready: 'text-green-500',
+    error: 'text-red-600',
   };
 
   return (
@@ -196,6 +200,14 @@ export default function SettingsPage() {
           </div>
         )}
 
+        {/* Initializing state */}
+        {waStatus.status === 'initializing' && (
+          <div className="flex flex-col items-center py-6 border-t border-gray-100">
+            <Loader2 className="w-8 h-8 text-blue-500 animate-spin mb-3" />
+            <p className="text-sm text-gray-500">Inicializando WhatsApp (pode levar ate 30s)...</p>
+          </div>
+        )}
+
         {/* Connecting state */}
         {waStatus.status === 'connecting' && (
           <div className="flex flex-col items-center py-6 border-t border-gray-100">
@@ -211,6 +223,21 @@ export default function SettingsPage() {
               <Wifi className="w-4 h-4 text-green-600" />
               <p className="text-sm text-green-700">
                 WhatsApp conectado e pronto para enviar mensagens automaticas!
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Error state */}
+        {waStatus.status === 'error' && (
+          <div className="border-t border-gray-100 pt-4">
+            <div className="p-3 bg-red-50 rounded-lg">
+              <p className="text-sm text-red-700 font-medium">Erro ao conectar WhatsApp</p>
+              {waStatus.error && (
+                <p className="text-xs text-red-500 mt-1 font-mono">{waStatus.error}</p>
+              )}
+              <p className="text-xs text-red-400 mt-2">
+                Clique em "Reconectar" para tentar novamente.
               </p>
             </div>
           </div>
