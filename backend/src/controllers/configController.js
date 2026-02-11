@@ -36,13 +36,15 @@ const configController = {
           });
         }
 
-        // Validar formato da hora (HH:MM)
-        const horaRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+        // Validar formato da hora (HH:MM ou HH:MM:SS)
+        const horaRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?$/;
         if (!horaRegex.test(config.hora)) {
           return res.status(400).json({
             error: 'hora deve estar no formato HH:MM'
           });
         }
+        // Normalizar para HH:MM
+        config.hora = config.hora.substring(0, 5);
       }
 
       const updated = await configModel.updateAll(configs);
