@@ -7,10 +7,7 @@ const env = {
   JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '7d',
   SUPABASE_URL: process.env.SUPABASE_URL,
   SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
-  // Z-API (WhatsApp)
-  ZAPI_INSTANCE_ID: process.env.ZAPI_INSTANCE_ID,
-  ZAPI_TOKEN: process.env.ZAPI_TOKEN,
-  ZAPI_SECURITY_TOKEN: process.env.ZAPI_SECURITY_TOKEN,
+  // WhatsApp (whatsapp-web.js - gratuito, sem API externa)
   FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:5173',
   RATE_LIMIT_WINDOW_MS: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 900000,
   RATE_LIMIT_MAX: parseInt(process.env.RATE_LIMIT_MAX) || 50,

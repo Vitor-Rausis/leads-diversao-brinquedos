@@ -4,38 +4,26 @@ const MessageModel = require('../models/messageModel');
 const logger = require('../utils/logger');
 
 /**
- * Webhook para receber mensagens do Z-API
- * Documentacao: https://developer.z-api.io/webhooks/on-message-received
+ * Processa mensagens recebidas do WhatsApp via whatsapp-web.js
+ * Chamado diretamente pelo evento client.on('message') no server.js
  */
-async function handleWhatsAppWebhook(req, res) {
+async function handleIncomingMessage(msg) {
   try {
-    const payload = req.body;
-
-    // Z-API envia diferentes tipos de eventos
-    // Vamos tratar mensagens recebidas
-    if (payload.isGroup) {
-      // Ignora mensagens de grupo
-      return res.status(200).json({ ok: true });
-    }
+    // Ignora mensagens de grupo
+    if (msg.from.endsWith('@g.us')) return;
 
     // Ignora mensagens enviadas por nos
-    if (payload.fromMe) {
-      return res.status(200).json({ ok: true });
-    }
+    if (msg.fromMe) return;
 
-    // Extrai dados da mensagem Z-API
-    const whatsapp = payload.phone; // Numero que enviou
-    const content = payload.text?.message ||
-                   payload.image?.caption ||
-                   payload.video?.caption ||
-                   payload.audio ? '[audio]' :
-                   payload.document?.caption || '[media]';
+    // Extrai numero do chatId (formato: 5511999999999@c.us)
+    const whatsapp = msg.from.replace('@c.us', '');
 
-    if (!whatsapp) {
-      return res.status(200).json({ ok: true });
-    }
+    // Extrai conteudo
+    const content = msg.body || (msg.hasMedia ? '[media]' : '[vazio]');
 
-    // Remove DDI se presente para buscar lead
+    if (!whatsapp) return;
+
+    // Remove DDI 55 para buscar lead (banco armazena sem DDI)
     const whatsappClean = whatsapp.replace(/^55/, '');
 
     // Find matching lead
@@ -47,7 +35,12 @@ async function handleWhatsAppWebhook(req, res) {
       whatsapp: whatsappClean,
       direcao: 'recebida',
       conteudo: content,
-      metadata: payload,
+      metadata: {
+        from: msg.from,
+        type: msg.type,
+        timestamp: msg.timestamp,
+        hasMedia: msg.hasMedia,
+      },
     });
 
     // If lead exists and is in active automation, pause automations
@@ -61,14 +54,18 @@ async function handleWhatsAppWebhook(req, res) {
       // Cancel all pending scheduled messages
       await MessageModel.cancelPendingForLead(lead.id);
 
-      logger.info(`Lead ${lead.id} respondeu via Z-API. Automacoes pausadas.`);
+      logger.info(`Lead ${lead.id} respondeu via WhatsApp. Automacoes pausadas.`);
     }
-
-    return res.status(200).json({ ok: true });
   } catch (err) {
-    logger.error('Erro no webhook Z-API:', err);
-    return res.status(200).json({ ok: true });
+    logger.error('Erro ao processar mensagem recebida:', err);
   }
 }
 
-module.exports = { handleWhatsAppWebhook };
+/**
+ * Endpoint de webhook (mantido para compatibilidade/testes)
+ */
+async function handleWhatsAppWebhook(req, res) {
+  return res.status(200).json({ ok: true, message: 'Webhook ativo (mensagens processadas via whatsapp-web.js)' });
+}
+
+module.exports = { handleWhatsAppWebhook, handleIncomingMessage };

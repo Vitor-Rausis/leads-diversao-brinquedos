@@ -5,7 +5,6 @@ const morgan = require('morgan');
 const path = require('path');
 const fs = require('fs');
 
-console.log('=== APP.JS LOADED v2 ===');
 const routes = require('./routes');
 const { generalLimiter } = require('./middlewares/rateLimiter');
 const errorHandler = require('./middlewares/errorHandler');
@@ -36,17 +35,14 @@ if (env.NODE_ENV !== 'test') {
   app.use(morgan('combined'));
 }
 
-// Health check (before rate limit)
+// Health check / keep-alive (before rate limit)
+// Use este endpoint com cron-job.org para manter o Render free tier acordado
 app.get('/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
 
-// Serve frontend static files in production (before rate limit)
+// Serve frontend static files (before rate limit)
 const frontendPath = path.join(__dirname, '../../frontend/dist');
-console.log('Frontend path:', frontendPath);
-console.log('NODE_ENV:', env.NODE_ENV);
-console.log('Dist exists:', fs.existsSync(frontendPath));
 
 if (fs.existsSync(frontendPath)) {
-  console.log('Dist contents:', fs.readdirSync(frontendPath));
   app.use(express.static(frontendPath));
 }
 
@@ -59,9 +55,7 @@ app.use('/api/v1', routes);
 // SPA fallback - serve index.html for all non-API routes
 if (fs.existsSync(frontendPath)) {
   app.get('*', (req, res) => {
-    const indexPath = path.join(frontendPath, 'index.html');
-    console.log('Serving index.html from:', indexPath);
-    res.sendFile(indexPath);
+    res.sendFile(path.join(frontendPath, 'index.html'));
   });
 }
 

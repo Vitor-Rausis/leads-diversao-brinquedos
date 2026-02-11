@@ -10,6 +10,7 @@ const publicRoutes = require('./publicRoutes');
 const webhookRoutes = require('./webhookRoutes');
 const settingsRoutes = require('./settingsRoutes');
 const configRoutes = require('./configRoutes');
+const whatsappRoutes = require('./whatsappRoutes');
 
 router.use('/auth', authRoutes);
 router.use('/leads', leadRoutes);
@@ -20,5 +21,6 @@ router.use('/public', publicRoutes);
 router.use('/webhook', webhookRoutes);
 router.use('/settings', settingsRoutes);
 router.use('/config', configRoutes);
+router.use('/whatsapp', whatsappRoutes);
 
 module.exports = router;
