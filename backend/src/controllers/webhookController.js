@@ -49,18 +49,21 @@ async function handleWhatsAppWebhook(req, res) {
       (msg.documentMessage ? '[documento]' : null) ||
       '[mensagem]';
 
-    // Remove DDI 55 para buscar no banco (armazena sem DDI)
-    const whatsappClean = whatsappRaw.replace(/^55/, '');
+    // Normaliza número — tenta com DDI (5541...) e sem DDI (41...)
+    const digits = whatsappRaw.replace(/\D/g, '');
+    const whatsappFull = digits.startsWith('55') ? digits : '55' + digits;
+    const whatsappShort = whatsappFull.replace(/^55/, '');
 
-    logger.info(`[Webhook] Mensagem de ${whatsappClean}: "${content.substring(0, 60)}"`);
+    logger.info(`[Webhook] Mensagem de ${whatsappFull}: "${content.substring(0, 60)}"`);
 
-    // Busca lead pelo número
-    const lead = await LeadModel.findByWhatsapp(whatsappClean);
+    // Busca lead tentando com DDI e sem DDI
+    let lead = await LeadModel.findByWhatsapp(whatsappFull);
+    if (!lead) lead = await LeadModel.findByWhatsapp(whatsappShort);
 
     // Registra no log de mensagens
     await MessageModel.createLog({
       lead_id: lead?.id || null,
-      whatsapp: whatsappClean,
+      whatsapp: whatsappFull,
       direcao: 'recebida',
       conteudo: content,
       metadata: {
