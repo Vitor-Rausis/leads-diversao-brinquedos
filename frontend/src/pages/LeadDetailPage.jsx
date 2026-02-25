@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Phone, Calendar, Tag, MessageSquare, Clock, Send, Inbox } from 'lucide-react';
+import { ArrowLeft, Phone, Calendar, Tag, MessageSquare, Clock } from 'lucide-react';
 import { getLead } from '../api/leadApi';
 import Badge from '../components/ui/Badge';
 import Card from '../components/ui/Card';
@@ -108,32 +108,26 @@ export default function LeadDetailPage() {
             Histórico de Mensagens
           </h2>
           {lead.mensagens_log?.length > 0 ? (
-            <div className="space-y-3 max-h-96 overflow-y-auto">
-              {lead.mensagens_log.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={`p-3 rounded-lg ${
-                    msg.direcao === 'enviada'
-                      ? 'bg-primary-50 ml-4'
-                      : 'bg-success-50 mr-4'
-                  }`}
-                >
-                  <div className="flex items-center gap-2 mb-1">
-                    {msg.direcao === 'enviada' ? (
-                      <Send className="w-3.5 h-3.5 text-primary-500" />
-                    ) : (
-                      <Inbox className="w-3.5 h-3.5 text-success-500" />
-                    )}
-                    <span className="text-xs font-medium text-gray-600">
-                      {msg.direcao === 'enviada' ? 'Enviada' : 'Recebida'}
-                    </span>
-                    <span className="text-xs text-gray-400">
-                      {msg.criado_em ? format(new Date(msg.criado_em), 'dd/MM/yyyy HH:mm') : '-'}
+            <div className="flex flex-col gap-2 max-h-96 overflow-y-auto pr-1">
+              {[...lead.mensagens_log].reverse().map((msg) => {
+                const enviada = msg.direcao === 'enviada';
+                return (
+                  <div key={msg.id} className={`flex flex-col ${enviada ? 'items-end' : 'items-start'}`}>
+                    <div
+                      className={`max-w-[85%] px-3 py-2 rounded-2xl text-sm ${
+                        enviada
+                          ? 'bg-primary-500 text-white rounded-tr-sm'
+                          : 'bg-gray-100 text-gray-800 rounded-tl-sm'
+                      }`}
+                    >
+                      <p className="whitespace-pre-wrap">{msg.conteudo}</p>
+                    </div>
+                    <span className="text-[11px] text-gray-400 mt-0.5 px-1">
+                      {enviada ? 'Sistema' : lead.nome} · {msg.criado_em ? format(new Date(msg.criado_em), 'dd/MM HH:mm') : '-'}
                     </span>
                   </div>
-                  <p className="text-sm text-gray-700 whitespace-pre-wrap">{msg.conteudo}</p>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <p className="text-sm text-gray-400 text-center py-4">Nenhuma mensagem registrada</p>
