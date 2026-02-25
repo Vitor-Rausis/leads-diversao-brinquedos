@@ -1,5 +1,5 @@
 const supabase = require('../config/supabase');
-const whatsappService = require('../services/whatsappService');
+const evolutionApi = require('../services/evolutionApiService');
 const logger = require('../utils/logger');
 
 const MAX_RETRIES = 3;
@@ -64,7 +64,7 @@ async function processScheduledMessages() {
 
     const text = template.replace(/\{\{nome\}\}/g, lead.nome);
 
-    const result = await whatsappService.sendTextMessage(lead.whatsapp, text);
+    const result = await evolutionApi.sendText(lead.whatsapp, text);
 
     if (result.success) {
       await supabase
@@ -81,7 +81,7 @@ async function processScheduledMessages() {
         direcao: 'enviada',
         conteudo: text,
         mensagem_agendada_id: msg.id,
-        metadata: result.data,
+        metadata: { messageId: result.messageId },
       });
 
       if (lead.status === 'Novo') {

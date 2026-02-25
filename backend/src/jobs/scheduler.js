@@ -1,5 +1,6 @@
 const cron = require('node-cron');
 const whatsappJobs = require('./whatsappJobs');
+const dripService = require('../services/dripService');
 const logger = require('../utils/logger');
 
 function initScheduler() {
@@ -13,6 +14,15 @@ function initScheduler() {
     }
   });
 
+  // A cada 5 minutos: processar fila de drip campaigns
+  cron.schedule('*/5 * * * *', async () => {
+    try {
+      await dripService.processQueue();
+    } catch (err) {
+      logger.error('[CRON] Erro ao processar fila drip:', err);
+    }
+  });
+
   // Diariamente as 02:00: retry de mensagens falhas
   cron.schedule('0 2 * * *', async () => {
     logger.info('[CRON] Retentando mensagens falhas...');
@@ -23,7 +33,7 @@ function initScheduler() {
     }
   });
 
-  logger.info('[CRON] Scheduler inicializado - verificacao a cada 5 minutos');
+  logger.info('[CRON] Scheduler inicializado - verificacao a cada 5 minutos + drip campaigns');
 }
 
 module.exports = { initScheduler };

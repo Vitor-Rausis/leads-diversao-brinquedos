@@ -33,6 +33,22 @@ const reportSchema = z.object({
   periodo_fim: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Formato: YYYY-MM-DD'),
 });
 
+const dripCampaignSchema = z.object({
+  name: z.string().min(1, 'Nome obrigatorio'),
+  description: z.string().optional().nullable(),
+  trigger_event: z.enum(['lead_created', 'lead_qualified', 'manual']).optional(),
+  is_active: z.boolean().optional(),
+  steps: z.array(z.object({
+    delay_minutes: z.number().min(0, 'Delay deve ser >= 0'),
+    message_template: z.string().min(1, 'Template obrigatorio'),
+  })).optional(),
+});
+
+const dripEnqueueSchema = z.object({
+  lead_id: z.string().uuid('lead_id invalido'),
+  campaign_id: z.string().uuid('campaign_id invalido'),
+});
+
 function validate(schema) {
   return (req, res, next) => {
     try {
@@ -54,4 +70,6 @@ module.exports = {
   loginSchema,
   publicLeadSchema,
   reportSchema,
+  dripCampaignSchema,
+  dripEnqueueSchema,
 };

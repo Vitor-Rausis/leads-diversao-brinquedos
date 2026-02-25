@@ -7,7 +7,10 @@ const env = {
   JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '7d',
   SUPABASE_URL: process.env.SUPABASE_URL,
   SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
-  // WhatsApp (whatsapp-web.js - gratuito, sem API externa)
+  // Evolution API (WhatsApp)
+  EVOLUTION_API_URL: process.env.EVOLUTION_API_URL || '',
+  EVOLUTION_API_KEY: process.env.EVOLUTION_API_KEY || '',
+  EVOLUTION_INSTANCE: process.env.EVOLUTION_INSTANCE || 'diversao-brinquedos',
   FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:5173',
   RATE_LIMIT_WINDOW_MS: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 900000,
   RATE_LIMIT_MAX: parseInt(process.env.RATE_LIMIT_MAX) || 50,

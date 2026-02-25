@@ -145,7 +145,7 @@ export default function MessagesPage() {
                     <td className="px-4 py-3 text-gray-600">{msg.whatsapp}</td>
                     <td className="px-4 py-3 text-gray-600 max-w-xs truncate">{msg.conteudo}</td>
                     <td className="px-4 py-3 text-gray-500 text-xs">
-                      {format(new Date(msg.criado_em), 'dd/MM/yyyy HH:mm')}
+                      {msg.criado_em ? format(new Date(msg.criado_em), 'dd/MM/yyyy HH:mm') : '-'}
                     </td>
                   </tr>
                 ))}
@@ -179,7 +179,7 @@ export default function MessagesPage() {
                       {msg.tipo === 'mes_10' && '10 meses'}
                     </td>
                     <td className="px-4 py-3 text-gray-500 text-xs">
-                      {format(new Date(msg.data_agendada), 'dd/MM/yyyy HH:mm')}
+                      {msg.data_agendada ? format(new Date(msg.data_agendada), 'dd/MM/yyyy HH:mm') : '-'}
                     </td>
                     <td className="px-4 py-3">
                       <Badge status={msg.status} />

@@ -52,7 +52,7 @@ export default function LeadDetailPage() {
               </span>
               <span className="flex items-center gap-1.5">
                 <Calendar className="w-4 h-4" />
-                {format(new Date(lead.data_cadastro), 'dd/MM/yyyy HH:mm')}
+                {lead.data_cadastro ? format(new Date(lead.data_cadastro), 'dd/MM/yyyy HH:mm') : '-'}
               </span>
               <span className="flex items-center gap-1.5">
                 <Tag className="w-4 h-4" /> {lead.origem}
@@ -89,7 +89,7 @@ export default function LeadDetailPage() {
                       {msg.tipo === 'mes_10' && 'Mensagem 10 meses'}
                     </p>
                     <p className="text-xs text-gray-500 mt-0.5">
-                      Agendada: {format(new Date(msg.data_agendada), 'dd/MM/yyyy HH:mm')}
+                      Agendada: {msg.data_agendada ? format(new Date(msg.data_agendada), 'dd/MM/yyyy HH:mm') : '-'}
                     </p>
                   </div>
                   <Badge status={msg.status} />
@@ -128,7 +128,7 @@ export default function LeadDetailPage() {
                       {msg.direcao === 'enviada' ? 'Enviada' : 'Recebida'}
                     </span>
                     <span className="text-xs text-gray-400">
-                      {format(new Date(msg.criado_em), 'dd/MM/yyyy HH:mm')}
+                      {msg.criado_em ? format(new Date(msg.criado_em), 'dd/MM/yyyy HH:mm') : '-'}
                     </span>
                   </div>
                   <p className="text-sm text-gray-700 whitespace-pre-wrap">{msg.conteudo}</p>

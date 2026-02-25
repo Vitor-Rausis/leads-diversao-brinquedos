@@ -3,8 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const app = require('./app');
 const { initScheduler } = require('./jobs/scheduler');
-const whatsappService = require('./services/whatsappService');
-const { handleIncomingMessage } = require('./controllers/webhookController');
+const evolutionApi = require('./services/evolutionApiService');
 const logger = require('./utils/logger');
 const env = require('./config/env');
 
@@ -15,7 +14,7 @@ const frontendPath = path.join(__dirname, '../../frontend/dist');
 const distExists = fs.existsSync(frontendPath);
 const indexExists = fs.existsSync(path.join(frontendPath, 'index.html'));
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   logger.info(`Servidor rodando na porta ${PORT}`);
   logger.info(`Ambiente: ${env.NODE_ENV}`);
   logger.info(`Frontend dist existe: ${distExists}`);
@@ -24,11 +23,11 @@ app.listen(PORT, () => {
   // Inicializa scheduler de mensagens
   initScheduler();
 
-  // Inicializa WhatsApp (whatsapp-web.js - gratuito)
-  whatsappService.initialize();
-
-  // Registra handler para mensagens recebidas
-  whatsappService.onMessage(handleIncomingMessage);
-
-  logger.info('WhatsApp inicializando... Acesse Configuracoes > WhatsApp para conectar.');
+  // Verifica conexao com Evolution API
+  const connected = await evolutionApi.isConnected();
+  if (connected) {
+    logger.info('Evolution API conectada e pronta para enviar mensagens.');
+  } else {
+    logger.warn('Evolution API nao conectada. Verifique a configuracao no .env e conecte a instancia.');
+  }
 });

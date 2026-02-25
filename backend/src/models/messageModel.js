@@ -4,7 +4,8 @@ class MessageModel {
   static async findAllLog({ page = 1, limit = 50, lead_id, direcao, search }) {
     let query = supabase
       .from('mensagens_log')
-      .select('*, leads:lead_id(id, nome, whatsapp)', { count: 'exact' });
+      .select('*, leads:lead_id(id, nome, whatsapp)', { count: 'exact' })
+      .not('lead_id', 'is', null);
 
     if (lead_id) query = query.eq('lead_id', lead_id);
     if (direcao) query = query.eq('direcao', direcao);

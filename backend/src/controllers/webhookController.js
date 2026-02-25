@@ -4,8 +4,8 @@ const MessageModel = require('../models/messageModel');
 const logger = require('../utils/logger');
 
 /**
- * Processa mensagens recebidas do WhatsApp via Baileys
- * Chamado diretamente pelo evento messages.upsert no server.js
+ * Processa mensagens recebidas do WhatsApp via Evolution API webhook
+ * Chamado pelo endpoint de webhook configurado na Evolution API
  */
 async function handleIncomingMessage(msg) {
   try {
@@ -65,7 +65,7 @@ async function handleIncomingMessage(msg) {
  * Endpoint de webhook (mantido para compatibilidade/testes)
  */
 async function handleWhatsAppWebhook(req, res) {
-  return res.status(200).json({ ok: true, message: 'Webhook ativo (mensagens processadas via Baileys)' });
+  return res.status(200).json({ ok: true, message: 'Webhook ativo (Evolution API)' });
 }
 
 module.exports = { handleWhatsAppWebhook, handleIncomingMessage };

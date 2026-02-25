@@ -148,7 +148,7 @@ export default function ReportsPage() {
                       {report.dados_json?.taxa_resposta || '0'}%
                     </td>
                     <td className="px-4 py-3 text-gray-500 text-xs">
-                      {format(new Date(report.criado_em), 'dd/MM/yyyy HH:mm')}
+                      {report.criado_em ? format(new Date(report.criado_em), 'dd/MM/yyyy HH:mm') : '-'}
                     </td>
                     <td className="px-4 py-3 text-right">
                       <button

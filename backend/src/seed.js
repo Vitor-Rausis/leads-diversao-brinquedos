@@ -74,6 +74,66 @@ async function seed() {
     }
   }
 
+  // Seed drip campaign - Diversao Brinquedos Follow-up
+  console.log('Criando campanha drip...');
+
+  const { data: existingCampaign } = await supabase
+    .from('drip_campaigns')
+    .select('id')
+    .eq('name', 'Diversão Brinquedos - Follow-up')
+    .single();
+
+  if (existingCampaign) {
+    console.log('Campanha drip ja existe, pulando...');
+  } else {
+    const { data: campaign, error: campErr } = await supabase
+      .from('drip_campaigns')
+      .insert({
+        name: 'Diversão Brinquedos - Follow-up',
+        description: 'Sequência automática: 3 dias, 7 dias e 10 meses após cadastro',
+        trigger_event: 'lead_created',
+        is_active: true,
+      })
+      .select()
+      .single();
+
+    if (campErr) {
+      console.error('Erro ao criar campanha drip:', campErr);
+    } else {
+      const steps = [
+        {
+          campaign_id: campaign.id,
+          step_order: 1,
+          delay_minutes: 4320, // 3 dias
+          message_template:
+            'Olá {{nome}}, você tem alguma dúvida sobre os brinquedos, ou tem interesse em fazer a reserva?',
+        },
+        {
+          campaign_id: campaign.id,
+          step_order: 2,
+          delay_minutes: 5760, // +4 dias (total 7 dias)
+          message_template:
+            'Olá {{nome}}, como vai?\nVocê já fez a locação dos brinquedos, ou tem interesse em fazer a locação?',
+        },
+        {
+          campaign_id: campaign.id,
+          step_order: 3,
+          delay_minutes: 432000, // +~300 dias (total ~10 meses)
+          message_template:
+            'Olá {{nome}}, sou o Fernando da Diversão Brinquedos, como vai?\n\nA um tempo atrás você fez a cotação de brinquedos com nossa empresa, quero saber se tem interesse em receber o catálogo atualizado para uma nova locação?',
+        },
+      ];
+
+      const { error: stepsErr } = await supabase.from('drip_steps').insert(steps);
+
+      if (stepsErr) {
+        console.error('Erro ao criar steps da campanha:', stepsErr);
+      } else {
+        console.log('Campanha drip criada: 3 steps (3 dias, 7 dias, 10 meses)');
+      }
+    }
+  }
+
   console.log('\nSeed completo!');
   console.log('Login: admin@diversaobrinquedos.com / admin123');
 }

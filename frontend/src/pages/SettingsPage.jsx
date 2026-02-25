@@ -309,7 +309,7 @@ export default function SettingsPage() {
                   </div>
                   <p className="text-xs font-mono text-gray-500 mt-1 truncate">{key.key_value}</p>
                   <p className="text-xs text-gray-400 mt-0.5">
-                    Criada em {format(new Date(key.criado_em), 'dd/MM/yyyy')}
+                    Criada em {key.criado_em ? format(new Date(key.criado_em), 'dd/MM/yyyy') : '-'}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
