@@ -4,68 +4,87 @@ const MessageModel = require('../models/messageModel');
 const logger = require('../utils/logger');
 
 /**
- * Processa mensagens recebidas do WhatsApp via Evolution API webhook
- * Chamado pelo endpoint de webhook configurado na Evolution API
+ * Recebe e processa eventos de webhook da Evolution API.
+ * Configurar na Evolution API: Webhook URL -> POST /api/v1/webhook/whatsapp
+ * Events habilitados: messages.upsert
  */
-async function handleIncomingMessage(msg) {
+async function handleWhatsAppWebhook(req, res) {
+  // Responde imediatamente para a Evolution API não retentar
+  res.status(200).json({ ok: true });
+
   try {
-    // Ignora mensagens de grupo
-    if (msg.from.endsWith('@g.us')) return;
+    const { event, data } = req.body;
 
-    // Ignora mensagens enviadas por nos
-    if (msg.fromMe) return;
+    // Só processa eventos de novas mensagens
+    if (event !== 'messages.upsert') return;
+    if (!data) return;
 
-    // Extrai numero do chatId (formato: 5511999999999@s.whatsapp.net ou @c.us)
-    const whatsapp = msg.from.replace('@s.whatsapp.net', '').replace('@c.us', '');
+    const key = data.key || {};
 
-    // Extrai conteudo
-    const content = msg.body || (msg.hasMedia ? '[media]' : '[vazio]');
+    // Ignora mensagens enviadas por nós
+    if (key.fromMe === true) return;
 
-    if (!whatsapp) return;
+    const remoteJid = key.remoteJid || '';
 
-    // Remove DDI 55 para buscar lead (banco armazena sem DDI)
-    const whatsappClean = whatsapp.replace(/^55/, '');
+    // Ignora grupos
+    if (remoteJid.endsWith('@g.us')) return;
 
-    // Find matching lead
+    // Extrai número limpo
+    const whatsappRaw = remoteJid
+      .replace(/@s\.whatsapp\.net$/, '')
+      .replace(/@c\.us$/, '');
+
+    if (!whatsappRaw) return;
+
+    // Extrai conteúdo da mensagem
+    const msg = data.message || {};
+    const content =
+      msg.conversation ||
+      msg.extendedTextMessage?.text ||
+      msg.imageMessage?.caption ||
+      msg.videoMessage?.caption ||
+      (msg.imageMessage ? '[imagem]' : null) ||
+      (msg.videoMessage ? '[vídeo]' : null) ||
+      (msg.audioMessage ? '[áudio]' : null) ||
+      (msg.documentMessage ? '[documento]' : null) ||
+      '[mensagem]';
+
+    // Remove DDI 55 para buscar no banco (armazena sem DDI)
+    const whatsappClean = whatsappRaw.replace(/^55/, '');
+
+    logger.info(`[Webhook] Mensagem de ${whatsappClean}: "${content.substring(0, 60)}"`);
+
+    // Busca lead pelo número
     const lead = await LeadModel.findByWhatsapp(whatsappClean);
 
-    // Log the received message
+    // Registra no log de mensagens
     await MessageModel.createLog({
       lead_id: lead?.id || null,
       whatsapp: whatsappClean,
       direcao: 'recebida',
       conteudo: content,
       metadata: {
-        from: msg.from,
-        type: msg.type,
-        timestamp: msg.timestamp,
-        hasMedia: msg.hasMedia,
+        remoteJid,
+        messageId: key.id,
+        pushName: data.pushName || null,
+        timestamp: data.messageTimestamp,
       },
     });
 
-    // If lead exists and is in active automation, pause automations
+    // Se lead existe e está em automação ativa, marca como Respondeu e pausa envios
     if (lead && ['Novo', 'Em Contato'].includes(lead.status)) {
-      // Update status to Respondeu
       await supabase
         .from('leads')
         .update({ status: 'Respondeu' })
         .eq('id', lead.id);
 
-      // Cancel all pending scheduled messages
       await MessageModel.cancelPendingForLead(lead.id);
 
-      logger.info(`Lead ${lead.id} respondeu via WhatsApp. Automações pausadas.`);
+      logger.info(`[Webhook] Lead "${lead.nome}" respondeu. Status -> Respondeu, automações pausadas.`);
     }
   } catch (err) {
-    logger.error('Erro ao processar mensagem recebida:', err);
+    logger.error('[Webhook] Erro ao processar evento:', err);
   }
 }
 
-/**
- * Endpoint de webhook (mantido para compatibilidade/testes)
- */
-async function handleWhatsAppWebhook(req, res) {
-  return res.status(200).json({ ok: true, message: 'Webhook ativo (Evolution API)' });
-}
-
-module.exports = { handleWhatsAppWebhook, handleIncomingMessage };
+module.exports = { handleWhatsAppWebhook };
