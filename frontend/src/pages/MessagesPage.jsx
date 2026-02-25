@@ -117,10 +117,10 @@ export default function MessagesPage() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600">Direcao</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-600">Direção</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600">Lead</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600">WhatsApp</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600">Conteudo</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-600">Conteúdo</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600">Data</th>
                 </tr>
               </thead>
@@ -128,16 +128,15 @@ export default function MessagesPage() {
                 {messages.map((msg) => (
                   <tr key={msg.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-1.5">
-                        {msg.direcao === 'enviada' ? (
-                          <Send className="w-4 h-4 text-primary-500" />
-                        ) : (
-                          <Inbox className="w-4 h-4 text-success-500" />
-                        )}
-                        <span className="text-xs font-medium">
-                          {msg.direcao === 'enviada' ? 'Enviada' : 'Recebida'}
+                      {msg.direcao === 'enviada' ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-primary-50 text-primary-700">
+                          <Send className="w-3 h-3" /> Sistema
                         </span>
-                      </div>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-success-50 text-success-700">
+                          <Inbox className="w-3 h-3" /> Lead
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3 font-medium text-gray-900">
                       {msg.leads?.nome || '-'}
