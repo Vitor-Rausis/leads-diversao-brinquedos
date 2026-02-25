@@ -35,6 +35,8 @@ async function pollIncomingMessages() {
     if (!records.length) return;
 
     // Filtra apenas mensagens mais novas que o último timestamp processado
+    // Nota: o filtro fromMe:false no request nem sempre é respeitado pela Evolution API,
+    // então verificamos o campo diretamente aqui também
     const novas = records.filter(
       (m) => m.messageTimestamp > lastProcessedTimestamp
     );
@@ -77,13 +79,11 @@ async function pollIncomingMessages() {
         (msg.documentMessage ? '[documento]' : null) ||
         '[mensagem]';
 
-      logger.info(`[Polling] Mensagem de ${whatsappFull}: "${content.substring(0, 60)}"`);
+      // Determina direção real pelo campo fromMe
+      const fromMe = record.key?.fromMe === true;
+      const direcao = fromMe ? 'enviada' : 'recebida';
 
-      // Busca lead tentando todas as variantes de número
-      let lead = await LeadModel.findByWhatsapp(whatsappFull);
-      if (!lead) lead = await LeadModel.findByWhatsapp(whatsappShort);
-      if (!lead && whatsappWith9 !== whatsappFull) lead = await LeadModel.findByWhatsapp(whatsappWith9);
-      if (!lead && whatsappWithout9 !== whatsappFull) lead = await LeadModel.findByWhatsapp(whatsappWithout9);
+      logger.info(`[Polling] ${direcao} ${whatsappFull}: "${content.substring(0, 60)}"`);
 
       // Registra no log (evita duplicatas pelo messageId)
       const messageId = record.key?.id;
@@ -97,10 +97,16 @@ async function pollIncomingMessages() {
         if (existing) continue; // já processada
       }
 
+      // Busca lead tentando todas as variantes de número
+      let lead = await LeadModel.findByWhatsapp(whatsappFull);
+      if (!lead) lead = await LeadModel.findByWhatsapp(whatsappShort);
+      if (!lead && whatsappWith9 !== whatsappFull) lead = await LeadModel.findByWhatsapp(whatsappWith9);
+      if (!lead && whatsappWithout9 !== whatsappFull) lead = await LeadModel.findByWhatsapp(whatsappWithout9);
+
       await MessageModel.createLog({
         lead_id: lead?.id || null,
         whatsapp: whatsappFull,
-        direcao: 'recebida',
+        direcao,
         conteudo: content,
         metadata: {
           remoteJid,
@@ -110,8 +116,8 @@ async function pollIncomingMessages() {
         },
       });
 
-      // Atualiza lead se em automação ativa
-      if (lead && ['Novo', 'Em Contato'].includes(lead.status)) {
+      // Só atualiza status do lead em resposta recebida
+      if (!fromMe && lead && ['Novo', 'Em Contato'].includes(lead.status)) {
         await supabase
           .from('leads')
           .update({ status: 'Respondeu' })
