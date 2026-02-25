@@ -1,9 +1,19 @@
 const cron = require('node-cron');
 const whatsappJobs = require('./whatsappJobs');
 const dripService = require('../services/dripService');
+const { pollIncomingMessages } = require('./incomingMessagesJob');
 const logger = require('../utils/logger');
 
 function initScheduler() {
+  // A cada minuto: busca mensagens recebidas na Evolution API (polling)
+  cron.schedule('* * * * *', async () => {
+    try {
+      await pollIncomingMessages();
+    } catch (err) {
+      logger.error('[CRON] Erro no polling de mensagens:', err);
+    }
+  });
+
   // A cada 5 minutos: verificar mensagens agendadas pendentes
   cron.schedule('*/5 * * * *', async () => {
     logger.info('[CRON] Verificando mensagens agendadas pendentes...');
@@ -33,7 +43,7 @@ function initScheduler() {
     }
   });
 
-  logger.info('[CRON] Scheduler inicializado - verificacao a cada 5 minutos + drip campaigns');
+  logger.info('[CRON] Scheduler inicializado - polling mensagens (1min) + agendadas (5min) + drip (5min)');
 }
 
 module.exports = { initScheduler };

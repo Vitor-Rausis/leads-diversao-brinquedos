@@ -53,12 +53,17 @@ async function handleWhatsAppWebhook(req, res) {
     const digits = whatsappRaw.replace(/\D/g, '');
     const whatsappFull = digits.startsWith('55') ? digits : '55' + digits;
     const whatsappShort = whatsappFull.replace(/^55/, '');
+    // Variantes com/sem o 9 extra (celulares brasileiros)
+    const whatsappWith9 = whatsappFull.replace(/^(55\d{2})(\d{8})$/, '$19$2');
+    const whatsappWithout9 = whatsappFull.replace(/^(55\d{2})9(\d{8})$/, '$1$2');
 
     logger.info(`[Webhook] Mensagem de ${whatsappFull}: "${content.substring(0, 60)}"`);
 
-    // Busca lead tentando com DDI e sem DDI
+    // Busca lead tentando todas as variantes de número
     let lead = await LeadModel.findByWhatsapp(whatsappFull);
     if (!lead) lead = await LeadModel.findByWhatsapp(whatsappShort);
+    if (!lead && whatsappWith9 !== whatsappFull) lead = await LeadModel.findByWhatsapp(whatsappWith9);
+    if (!lead && whatsappWithout9 !== whatsappFull) lead = await LeadModel.findByWhatsapp(whatsappWithout9);
 
     // Registra no log de mensagens
     await MessageModel.createLog({
