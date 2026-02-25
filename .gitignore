@@ -5,3 +5,9 @@ dist/
 *.log
 .DS_Store
 Thumbs.db
+nul
+
+# Arquivos legados Baileys (substituído por Evolution API)
+backend/src/services/whatsappService.js
+backend/src/services/supabaseAuthState.js
+docs/add-whatsapp-session-table.sql
