@@ -14,6 +14,7 @@ const env = {
   FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:5173',
   RATE_LIMIT_WINDOW_MS: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 900000,
   RATE_LIMIT_MAX: parseInt(process.env.RATE_LIMIT_MAX) || 50,
+  CRON_SECRET: process.env.CRON_SECRET || '',
 };
 
 const required = ['JWT_SECRET', 'SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY'];

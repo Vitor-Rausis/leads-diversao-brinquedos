@@ -1,0 +1,49 @@
+name: Cron Jobs
+
+on:
+  schedule:
+    # Polling de mensagens recebidas: a cada minuto
+    - cron: '* * * * *'
+  workflow_dispatch: # permite disparar manualmente para testar
+
+jobs:
+  poll-messages:
+    name: Poll incoming messages
+    runs-on: ubuntu-latest
+    steps:
+      - name: Chamar endpoint de polling
+        run: |
+          curl -s -o /dev/null -w "%{http_code}" \
+            -X POST "${{ secrets.RENDER_URL }}/api/v1/cron/poll-messages" \
+            -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            --max-time 30 \
+            --fail
+
+  process-scheduled:
+    name: Process scheduled messages (every 5 min)
+    runs-on: ubuntu-latest
+    # Roda só quando o minuto é múltiplo de 5
+    # GitHub Actions não suporta */5 * * * * num único workflow com * * * * *,
+    # então filtramos pelo minuto atual via bash
+    steps:
+      - name: Verificar se deve rodar (múltiplo de 5)
+        id: check
+        run: |
+          MINUTE=$(date +%M | sed 's/^0*//')
+          MINUTE=${MINUTE:-0}
+          if [ $((MINUTE % 5)) -eq 0 ]; then
+            echo "run=true" >> $GITHUB_OUTPUT
+          else
+            echo "run=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Processar mensagens agendadas e drip
+        if: steps.check.outputs.run == 'true'
+        run: |
+          curl -s -o /dev/null -w "%{http_code}" \
+            -X POST "${{ secrets.RENDER_URL }}/api/v1/cron/process-scheduled" \
+            -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            --max-time 55 \
+            --fail
