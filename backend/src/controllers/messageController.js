@@ -14,7 +14,7 @@ async function createScheduled(req, res, next) {
       return res.status(400).json({ error: 'conteudo_custom não pode ser vazio' });
     }
 
-    const result = await MessageModel.createScheduled({ lead_id, tipo, conteudo_custom, data_agendada });
+    const result = await MessageModel.createScheduled({ lead_id, tipo, conteudo_custom, data_agendada, forcar_envio: true });
     res.status(201).json(result);
   } catch (err) {
     next(err);

@@ -15,7 +15,7 @@ async function processScheduledMessages() {
   const { data: messages, error } = await supabase
     .from('mensagens_agendadas')
     .select(`
-      id, tipo, conteudo_custom, data_agendada, tentativas,
+      id, tipo, conteudo_custom, forcar_envio, data_agendada, tentativas,
       leads!inner(id, nome, whatsapp, status)
     `)
     .eq('status', 'pendente')
@@ -47,8 +47,8 @@ async function processScheduledMessages() {
   for (const msg of messages) {
     const lead = msg.leads;
 
-    // Skip if lead is Perdido, Convertido or Respondeu
-    if (['Perdido', 'Convertido', 'Respondeu'].includes(lead.status)) {
+    // Skip if lead is Perdido, Convertido or Respondeu — exceto mensagens com forcar_envio
+    if (!msg.forcar_envio && ['Perdido', 'Convertido', 'Respondeu'].includes(lead.status)) {
       await supabase
         .from('mensagens_agendadas')
         .update({ status: 'cancelada' })
