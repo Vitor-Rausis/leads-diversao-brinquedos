@@ -1,18 +1,11 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
 import Modal from '../ui/Modal';
-import Select from '../ui/Select';
 import Button from '../ui/Button';
 import { createScheduledMessage } from '../../api/messageApi';
 
-const TIPOS = [
-  { value: 'dia_3', label: 'Mensagem 3 dias' },
-  { value: 'dia_7', label: 'Mensagem 7 dias' },
-  { value: 'mes_10', label: 'Mensagem 10 meses' },
-];
-
 export default function ScheduleMessageModal({ isOpen, onClose, onSuccess, lead }) {
-  const [tipo, setTipo] = useState('dia_3');
+  const [conteudo, setConteudo] = useState('');
   const [dataHora, setDataHora] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -21,6 +14,10 @@ export default function ScheduleMessageModal({ isOpen, onClose, onSuccess, lead 
     e.preventDefault();
     setError('');
 
+    if (!conteudo.trim()) {
+      setError('Escreva a mensagem');
+      return;
+    }
     if (!dataHora) {
       setError('Informe a data e hora');
       return;
@@ -36,7 +33,8 @@ export default function ScheduleMessageModal({ isOpen, onClose, onSuccess, lead 
     try {
       await createScheduledMessage({
         lead_id: lead.id,
-        tipo,
+        tipo: 'dia_3',
+        conteudo_custom: conteudo.trim(),
         data_agendada: dataAgendada,
       });
       onSuccess();
@@ -48,13 +46,12 @@ export default function ScheduleMessageModal({ isOpen, onClose, onSuccess, lead 
   };
 
   const handleClose = () => {
-    setTipo('dia_3');
+    setConteudo('');
     setDataHora('');
     setError('');
     onClose();
   };
 
-  // Mínimo: agora + 1 minuto, formatado para datetime-local
   const minDatetime = format(new Date(Date.now() + 60000), "yyyy-MM-dd'T'HH:mm");
 
   return (
@@ -65,12 +62,17 @@ export default function ScheduleMessageModal({ isOpen, onClose, onSuccess, lead 
           <p>{lead?.whatsapp}</p>
         </div>
 
-        <Select
-          label="Template"
-          options={TIPOS}
-          value={tipo}
-          onChange={(e) => setTipo(e.target.value)}
-        />
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Mensagem</label>
+          <textarea
+            value={conteudo}
+            onChange={(e) => setConteudo(e.target.value)}
+            rows={4}
+            placeholder="Digite a mensagem que será enviada..."
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+          />
+          <p className="text-xs text-gray-400 mt-0.5">Use {'{{'} {'nome}}'} para inserir o nome do lead</p>
+        </div>
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Data e hora</label>

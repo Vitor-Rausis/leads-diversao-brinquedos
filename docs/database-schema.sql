@@ -72,6 +72,7 @@ CREATE TABLE mensagens_agendadas (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     lead_id UUID NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
     tipo mensagem_tipo NOT NULL,
+    conteudo_custom TEXT,
     data_agendada TIMESTAMPTZ NOT NULL,
     status mensagem_status DEFAULT 'pendente',
     tentativas INT DEFAULT 0,

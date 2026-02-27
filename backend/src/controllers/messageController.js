@@ -4,14 +4,17 @@ const TIPOS_VALIDOS = ['dia_3', 'dia_7', 'mes_10'];
 
 async function createScheduled(req, res, next) {
   try {
-    const { lead_id, tipo, data_agendada } = req.body;
+    const { lead_id, tipo, conteudo_custom, data_agendada } = req.body;
 
     if (!lead_id) return res.status(400).json({ error: 'lead_id é obrigatório' });
     if (!tipo || !TIPOS_VALIDOS.includes(tipo)) return res.status(400).json({ error: 'tipo inválido. Use: dia_3, dia_7 ou mes_10' });
     if (!data_agendada) return res.status(400).json({ error: 'data_agendada é obrigatória' });
     if (new Date(data_agendada) <= new Date()) return res.status(400).json({ error: 'data_agendada deve ser no futuro' });
+    if (conteudo_custom !== undefined && conteudo_custom !== null && conteudo_custom.trim() === '') {
+      return res.status(400).json({ error: 'conteudo_custom não pode ser vazio' });
+    }
 
-    const result = await MessageModel.createScheduled({ lead_id, tipo, data_agendada });
+    const result = await MessageModel.createScheduled({ lead_id, tipo, conteudo_custom, data_agendada });
     res.status(201).json(result);
   } catch (err) {
     next(err);

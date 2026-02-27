@@ -15,7 +15,7 @@ async function processScheduledMessages() {
   const { data: messages, error } = await supabase
     .from('mensagens_agendadas')
     .select(`
-      id, tipo, data_agendada, tentativas,
+      id, tipo, conteudo_custom, data_agendada, tentativas,
       leads!inner(id, nome, whatsapp, status)
     `)
     .eq('status', 'pendente')
@@ -56,13 +56,18 @@ async function processScheduledMessages() {
       continue;
     }
 
-    const template = templateMap[msg.tipo] || DEFAULT_TEMPLATES[msg.tipo];
-    if (!template) {
-      logger.warn(`Sem template para tipo: ${msg.tipo}`);
-      continue;
+    // Se tem conteúdo personalizado, usa diretamente; senão usa o template
+    let text;
+    if (msg.conteudo_custom) {
+      text = msg.conteudo_custom.replace(/\{\{nome\}\}/g, lead.nome);
+    } else {
+      const template = templateMap[msg.tipo] || DEFAULT_TEMPLATES[msg.tipo];
+      if (!template) {
+        logger.warn(`Sem template para tipo: ${msg.tipo}`);
+        continue;
+      }
+      text = template.replace(/\{\{nome\}\}/g, lead.nome);
     }
-
-    const text = template.replace(/\{\{nome\}\}/g, lead.nome);
 
     const result = await evolutionApi.sendText(lead.whatsapp, text);
 
