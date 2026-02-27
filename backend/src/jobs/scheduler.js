@@ -14,9 +14,8 @@ function initScheduler() {
     }
   });
 
-  // A cada 5 minutos: verificar mensagens agendadas pendentes
-  cron.schedule('*/5 * * * *', async () => {
-    logger.info('[CRON] Verificando mensagens agendadas pendentes...');
+  // A cada minuto: verificar mensagens agendadas pendentes
+  cron.schedule('* * * * *', async () => {
     try {
       await whatsappJobs.processScheduledMessages();
     } catch (err) {
@@ -24,8 +23,8 @@ function initScheduler() {
     }
   });
 
-  // A cada 5 minutos: processar fila de drip campaigns
-  cron.schedule('*/5 * * * *', async () => {
+  // A cada minuto: processar fila de drip campaigns
+  cron.schedule('* * * * *', async () => {
     try {
       await dripService.processQueue();
     } catch (err) {
@@ -43,7 +42,7 @@ function initScheduler() {
     }
   });
 
-  logger.info('[CRON] Scheduler inicializado - polling (1min) + agendadas (5min) + drip (5min) + retry (02:00)');
+  logger.info('[CRON] Scheduler inicializado - polling (1min) + agendadas (1min) + drip (1min) + retry (02:00)');
 }
 
 module.exports = { initScheduler };
