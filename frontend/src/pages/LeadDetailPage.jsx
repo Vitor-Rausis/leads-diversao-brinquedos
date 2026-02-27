@@ -90,11 +90,14 @@ export default function LeadDetailPage() {
                   key={msg.id}
                   className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
                 >
-                  <div>
+                  <div className="flex-1 min-w-0 mr-3">
                     <p className="text-sm font-medium text-gray-700">
-                      {msg.tipo === 'dia_3' && 'Mensagem 3 dias'}
-                      {msg.tipo === 'dia_7' && 'Mensagem 7 dias'}
-                      {msg.tipo === 'mes_10' && 'Mensagem 10 meses'}
+                      {msg.conteudo_custom
+                        ? <span className="truncate block" title={msg.conteudo_custom}>{msg.conteudo_custom.length > 60 ? msg.conteudo_custom.substring(0, 60) + '…' : msg.conteudo_custom}</span>
+                        : msg.tipo === 'dia_3' ? 'Mensagem 3 dias'
+                        : msg.tipo === 'dia_7' ? 'Mensagem 7 dias'
+                        : 'Mensagem 10 meses'
+                      }
                     </p>
                     <p className="text-xs text-gray-500 mt-0.5">
                       Agendada: {msg.data_agendada ? format(new Date(msg.data_agendada), 'dd/MM/yyyy HH:mm') : '-'}
