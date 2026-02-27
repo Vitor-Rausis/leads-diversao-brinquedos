@@ -116,8 +116,19 @@ async function pollIncomingMessages() {
         },
       });
 
-      // Só atualiza status do lead em resposta recebida
-      if (!fromMe && lead && ['Novo', 'Em Contato'].includes(lead.status)) {
+      // Só atualiza status do lead em resposta recebida APÓS o cadastro do lead
+      const msgTimestamp = record.messageTimestamp; // segundos Unix
+      const leadCadastroTs = lead?.data_cadastro
+        ? Math.floor(new Date(lead.data_cadastro).getTime() / 1000)
+        : null;
+
+      if (
+        !fromMe &&
+        lead &&
+        ['Novo', 'Em Contato'].includes(lead.status) &&
+        leadCadastroTs &&
+        msgTimestamp >= leadCadastroTs
+      ) {
         await supabase
           .from('leads')
           .update({ status: 'Respondeu' })

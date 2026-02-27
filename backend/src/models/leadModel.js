@@ -101,7 +101,7 @@ class LeadModel {
   static async findByWhatsapp(whatsapp) {
     const { data, error } = await supabase
       .from('leads')
-      .select('id, nome, status')
+      .select('id, nome, status, data_cadastro')
       .eq('whatsapp', whatsapp)
       .single();
 
