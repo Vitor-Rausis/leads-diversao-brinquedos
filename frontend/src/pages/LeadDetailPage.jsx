@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Phone, Calendar, Tag, MessageSquare, Clock } from 'lucide-react';
+import { ArrowLeft, Phone, Calendar, Tag, MessageSquare, Clock, Plus } from 'lucide-react';
 import { getLead } from '../api/leadApi';
 import Badge from '../components/ui/Badge';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Spinner from '../components/ui/Spinner';
+import ScheduleMessageModal from '../components/messages/ScheduleMessageModal';
 import { format } from 'date-fns';
 
 export default function LeadDetailPage() {
@@ -13,6 +14,7 @@ export default function LeadDetailPage() {
   const navigate = useNavigate();
   const [lead, setLead] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
 
   useEffect(() => {
     loadLead();
@@ -71,10 +73,16 @@ export default function LeadDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Mensagens Agendadas */}
         <Card className="p-6">
-          <h2 className="text-base font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            <Clock className="w-5 h-5 text-primary-500" />
-            Mensagens Agendadas
-          </h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-base font-semibold text-gray-800 flex items-center gap-2">
+              <Clock className="w-5 h-5 text-primary-500" />
+              Mensagens Agendadas
+            </h2>
+            <Button size="sm" onClick={() => setScheduleModalOpen(true)}>
+              <Plus className="w-3.5 h-3.5" />
+              Agendar
+            </Button>
+          </div>
           {lead.mensagens_agendadas?.length > 0 ? (
             <div className="space-y-3">
               {lead.mensagens_agendadas.map((msg) => (
@@ -134,6 +142,13 @@ export default function LeadDetailPage() {
           )}
         </Card>
       </div>
+
+      <ScheduleMessageModal
+        isOpen={scheduleModalOpen}
+        onClose={() => setScheduleModalOpen(false)}
+        onSuccess={() => { loadLead(); setScheduleModalOpen(false); }}
+        lead={lead}
+      />
     </div>
   );
 }

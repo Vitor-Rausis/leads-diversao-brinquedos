@@ -52,6 +52,16 @@ class MessageModel {
     return data;
   }
 
+  static async createScheduled({ lead_id, tipo, data_agendada }) {
+    const { data, error } = await supabase
+      .from('mensagens_agendadas')
+      .insert({ lead_id, tipo, data_agendada, status: 'pendente', tentativas: 0 })
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  }
+
   static async cancelPendingForLead(leadId) {
     const { error } = await supabase
       .from('mensagens_agendadas')

@@ -7,5 +7,6 @@ router.use(authMiddleware);
 
 router.get('/', messageController.listLog);
 router.get('/scheduled', messageController.listScheduled);
+router.post('/scheduled', messageController.createScheduled);
 
 module.exports = router;
