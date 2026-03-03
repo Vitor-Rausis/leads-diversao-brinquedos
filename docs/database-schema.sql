@@ -178,8 +178,12 @@ BEGIN
     FOR config IN
         SELECT tipo, dias, hora FROM configuracoes_mensagem WHERE ativo = TRUE
     LOOP
-        -- Calcula a data de envio: data_cadastro + dias, no horario configurado
-        data_envio := (NEW.data_cadastro::DATE + config.dias * INTERVAL '1 day') + config.hora;
+        -- Calcula a data de envio: data_cadastro + dias, no horario configurado (America/Sao_Paulo)
+        -- AT TIME ZONE converte o timestamp local (BRT) para UTC para armazenamento correto
+        data_envio := TIMEZONE(
+            'America/Sao_Paulo',
+            (NEW.data_cadastro::DATE + config.dias * INTERVAL '1 day')::TIMESTAMP + config.hora
+        );
 
         INSERT INTO mensagens_agendadas (lead_id, tipo, data_agendada)
         VALUES (NEW.id, config.tipo, data_envio);

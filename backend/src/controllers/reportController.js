@@ -1,6 +1,7 @@
 const ReportModel = require('../models/reportModel');
 const ReportService = require('../services/reportService');
 const CsvService = require('../services/csvService');
+const supabase = require('../config/supabase');
 
 async function list(req, res, next) {
   try {
@@ -61,4 +62,94 @@ async function downloadCSV(req, res, next) {
   }
 }
 
-module.exports = { list, generate, downloadCSV };
+// GET /reports/live — dados ao vivo do mes corrente (nao salva no banco)
+async function getLive(req, res, next) {
+  try {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const periodoInicio = `${year}-${month}-01`;
+    const lastDay = new Date(year, now.getMonth() + 1, 0).getDate();
+    const periodoFim = `${year}-${month}-${lastDay}`;
+
+    const startDate = `${periodoInicio}T00:00:00.000Z`;
+    const endDate = `${periodoFim}T23:59:59.999Z`;
+
+    // Todos os leads (total acumulado)
+    const { data: todosLeads, error: todosErr } = await supabase
+      .from('leads')
+      .select('id, status, origem, data_cadastro');
+    if (todosErr) throw todosErr;
+
+    // Leads cadastrados no mes atual
+    const leadsDoMes = todosLeads.filter((l) => {
+      const d = new Date(l.data_cadastro);
+      return d >= new Date(startDate) && d <= new Date(endDate);
+    });
+
+    const totalLeads = todosLeads.length;
+    const leadsNoMes = leadsDoMes.length;
+    let leadsConvertidos = 0;
+    let leadsPerdidos = 0;
+    let leadsResponderam = 0;
+    let leadsNovos = 0;
+    let leadsEmContato = 0;
+    const porOrigem = {};
+    const porStatus = {};
+
+    todosLeads.forEach((lead) => {
+      if (lead.status === 'Convertido') leadsConvertidos++;
+      if (lead.status === 'Perdido') leadsPerdidos++;
+      if (lead.status === 'Respondeu') leadsResponderam++;
+      if (lead.status === 'Novo') leadsNovos++;
+      if (lead.status === 'Em Contato') leadsEmContato++;
+      porOrigem[lead.origem] = (porOrigem[lead.origem] || 0) + 1;
+      porStatus[lead.status] = (porStatus[lead.status] || 0) + 1;
+    });
+
+    // Mensagens do mes
+    const { count: mensagensEnviadas } = await supabase
+      .from('mensagens_log')
+      .select('id', { count: 'exact' })
+      .eq('direcao', 'enviada')
+      .gte('criado_em', startDate)
+      .lte('criado_em', endDate);
+
+    const { count: mensagensRecebidas } = await supabase
+      .from('mensagens_log')
+      .select('id', { count: 'exact' })
+      .eq('direcao', 'recebida')
+      .gte('criado_em', startDate)
+      .lte('criado_em', endDate);
+
+    const taxaResposta = mensagensEnviadas > 0
+      ? ((mensagensRecebidas / mensagensEnviadas) * 100).toFixed(1)
+      : '0.0';
+
+    const taxaConversao = totalLeads > 0
+      ? ((leadsConvertidos / totalLeads) * 100).toFixed(1)
+      : '0.0';
+
+    res.json({
+      periodo_inicio: periodoInicio,
+      periodo_fim: periodoFim,
+      total_leads: totalLeads,
+      leads_no_mes: leadsNoMes,
+      leads_convertidos: leadsConvertidos,
+      leads_perdidos: leadsPerdidos,
+      leads_responderam: leadsResponderam,
+      leads_novos: leadsNovos,
+      leads_em_contato: leadsEmContato,
+      mensagens_enviadas: mensagensEnviadas || 0,
+      mensagens_recebidas: mensagensRecebidas || 0,
+      taxa_resposta: taxaResposta,
+      taxa_conversao: taxaConversao,
+      por_origem: porOrigem,
+      por_status: porStatus,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { list, generate, downloadCSV, getLive };

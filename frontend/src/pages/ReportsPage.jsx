@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
-import { getReports, generateReport, downloadReportCSV } from '../api/reportApi';
+import { getReports, getLiveReport, generateReport, downloadReportCSV } from '../api/reportApi';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { FileDown, Plus, TrendingUp, Users, MessageSquare, Send, X, ChevronDown, ChevronUp } from 'lucide-react';
+import {
+  FileDown, Plus, TrendingUp, Users, MessageSquare, Send,
+  X, ChevronDown, ChevronUp, RefreshCw, Activity,
+} from 'lucide-react';
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer, Legend,
+  Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell,
 } from 'recharts';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
@@ -54,25 +57,55 @@ const CustomTooltip = ({ active, payload, label }) => {
   );
 };
 
+const PIE_COLORS = {
+  Novo: '#3B82F6',
+  'Em Contato': '#F59E0B',
+  Respondeu: '#8B5CF6',
+  Convertido: '#10B981',
+  Perdido: '#EF4444',
+};
+
 export default function ReportsPage() {
+  const [live, setLive] = useState(null);
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [showTable, setShowTable] = useState(false);
   const [periodoInicio, setPeriodoInicio] = useState('');
   const [periodoFim, setPeriodoFim] = useState('');
 
-  useEffect(() => { loadReports(); }, []);
+  useEffect(() => {
+    loadAll();
+  }, []);
 
-  const loadReports = async () => {
+  const loadAll = async () => {
     try {
-      const res = await getReports();
-      setReports(res.data.data || []);
+      const [liveRes, reportsRes] = await Promise.all([
+        getLiveReport(),
+        getReports(),
+      ]);
+      setLive(liveRes.data);
+      setReports(reportsRes.data.data || []);
     } catch (err) {
       console.error('Erro ao carregar relatórios:', err);
+      toast.error('Erro ao carregar dados');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      const res = await getLiveReport();
+      setLive(res.data);
+      toast.success('Dados atualizados');
+    } catch {
+      toast.error('Erro ao atualizar');
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -82,10 +115,11 @@ export default function ReportsPage() {
     setGenerating(true);
     try {
       await generateReport({ periodo_inicio: periodoInicio, periodo_fim: periodoFim });
-      toast.success('Relatório gerado com sucesso');
+      toast.success('Relatório salvo com sucesso');
       setShowForm(false);
       setPeriodoInicio(''); setPeriodoFim('');
-      loadReports();
+      const res = await getReports();
+      setReports(res.data.data || []);
     } catch (err) {
       toast.error(err.response?.data?.error || 'Erro ao gerar relatório');
     } finally {
@@ -108,11 +142,15 @@ export default function ReportsPage() {
 
   if (loading) return <Spinner size="lg" />;
 
-  // Prepara dados para gráficos (ordem cronológica)
+  // Pie chart data (status atual de todos os leads)
+  const pieData = live?.por_status
+    ? Object.entries(live.por_status).map(([name, value]) => ({ name, value }))
+    : [];
+
+  // Dados históricos para gráficos
   const sorted = [...reports].sort((a, b) =>
     new Date(a.periodo_inicio) - new Date(b.periodo_inicio)
   );
-
   const chartData = sorted.map((r) => ({
     mes: formatMonth(r.periodo_inicio),
     Leads: r.total_leads,
@@ -120,22 +158,7 @@ export default function ReportsPage() {
     Perdidos: r.leads_perdidos,
     'Msg Enviadas': r.mensagens_enviadas,
     'Msg Recebidas': r.mensagens_recebidas,
-    taxa: parseFloat(r.dados_json?.taxa_resposta || 0),
   }));
-
-  // Totais acumulados
-  const totalLeads = reports.reduce((s, r) => s + (r.total_leads || 0), 0);
-  const totalConvertidos = reports.reduce((s, r) => s + (r.leads_convertidos || 0), 0);
-  const totalEnviadas = reports.reduce((s, r) => s + (r.mensagens_enviadas || 0), 0);
-  const taxaMedia = reports.length
-    ? (reports.reduce((s, r) => s + parseFloat(r.dados_json?.taxa_resposta || 0), 0) / reports.length).toFixed(1)
-    : '0.0';
-  const taxaConversao = totalLeads > 0 ? ((totalConvertidos / totalLeads) * 100).toFixed(1) : '0.0';
-
-  // Melhor mês (mais convertidos)
-  const melhorMes = sorted.reduce((best, r) =>
-    (r.leads_convertidos || 0) > (best?.leads_convertidos || 0) ? r : best, null
-  );
 
   return (
     <div className="space-y-6">
@@ -143,73 +166,148 @@ export default function ReportsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Relatórios</h1>
-          <p className="text-sm text-gray-500 mt-1">{reports.length} períodos analisados</p>
+          <p className="text-sm text-gray-500 mt-1">Dados em tempo real + histórico por período</p>
         </div>
-        <Button onClick={() => setShowForm(!showForm)}>
-          {showForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-          {showForm ? 'Cancelar' : 'Gerar Relatório'}
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="secondary" onClick={handleRefresh} loading={refreshing}>
+            <RefreshCw className="w-4 h-4" />
+            Atualizar
+          </Button>
+          <Button onClick={() => setShowForm(!showForm)}>
+            {showForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+            {showForm ? 'Cancelar' : 'Salvar Período'}
+          </Button>
+        </div>
       </div>
 
-      {/* Formulário */}
+      {/* Formulário salvar relatório histórico */}
       {showForm && (
         <Card className="p-6">
-          <h3 className="text-base font-semibold text-gray-800 mb-4">Novo Relatório</h3>
+          <h3 className="text-base font-semibold text-gray-800 mb-1">Salvar Relatório do Período</h3>
+          <p className="text-sm text-gray-500 mb-4">Gera um snapshot dos dados e salva no histórico.</p>
           <form onSubmit={handleGenerate} className="flex flex-col sm:flex-row items-end gap-4">
             <Input label="Início" type="date" value={periodoInicio}
               onChange={(e) => setPeriodoInicio(e.target.value)} className="flex-1" required />
             <Input label="Fim" type="date" value={periodoFim}
               onChange={(e) => setPeriodoFim(e.target.value)} className="flex-1" required />
-            <Button type="submit" loading={generating}>Gerar</Button>
+            <Button type="submit" loading={generating}>Salvar</Button>
           </form>
         </Card>
       )}
 
-      {reports.length === 0 ? (
-        <Card className="p-12 text-center">
-          <TrendingUp className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-          <p className="text-gray-500 font-medium">Nenhum relatório gerado ainda</p>
-          <p className="text-sm text-gray-400 mt-1">Clique em "Gerar Relatório" para começar</p>
-        </Card>
-      ) : (
+      {/* === PAINEL AO VIVO === */}
+      {live && (
         <>
-          {/* Cards de resumo */}
+          <div className="flex items-center gap-2">
+            <Activity className="w-4 h-4 text-emerald-500" />
+            <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
+              Visão Geral — Dados em Tempo Real
+            </h2>
+          </div>
+
+          {/* Cards principais */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard title="Total de Leads" value={totalLeads}
-              subtitle={`${reports.length} meses`}
+            <StatCard title="Total de Leads" value={live.total_leads}
+              subtitle={`${live.leads_no_mes} cadastrados este mês`}
               color={{ bg: 'bg-blue-50', text: 'text-blue-600' }} icon={Users} />
-            <StatCard title="Convertidos" value={totalConvertidos}
-              subtitle={`${taxaConversao}% de conversão`}
+            <StatCard title="Convertidos" value={live.leads_convertidos}
+              subtitle={`${live.taxa_conversao}% de conversão`}
               color={{ bg: 'bg-emerald-50', text: 'text-emerald-600' }} icon={TrendingUp} />
-            <StatCard title="Msgs Enviadas" value={totalEnviadas}
-              subtitle={`~${Math.round(totalEnviadas / reports.length)}/mês`}
+            <StatCard title="Msgs Enviadas (mês)" value={live.mensagens_enviadas}
+              subtitle={`${live.mensagens_recebidas} recebidas`}
               color={{ bg: 'bg-amber-50', text: 'text-amber-600' }} icon={Send} />
-            <StatCard title="Taxa de Resposta" value={`${taxaMedia}%`}
-              subtitle="média dos períodos"
+            <StatCard title="Taxa de Resposta" value={`${live.taxa_resposta}%`}
+              subtitle="respostas / enviadas (mês)"
               color={{ bg: 'bg-purple-50', text: 'text-purple-600' }} icon={MessageSquare} />
           </div>
 
-          {/* Destaque melhor mês */}
-          {melhorMes && (
-            <Card className="p-4 bg-emerald-50 border border-emerald-200">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-emerald-100 rounded-lg">
-                  <TrendingUp className="w-5 h-5 text-emerald-600" />
+          {/* Pipeline + Origem */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* Funil por status */}
+            <Card className="p-6">
+              <h3 className="text-base font-semibold text-gray-800 mb-5">Pipeline de Leads</h3>
+              {pieData.length > 0 ? (
+                <div className="flex flex-col sm:flex-row items-center gap-4">
+                  <ResponsiveContainer width={180} height={180}>
+                    <PieChart>
+                      <Pie data={pieData} cx="50%" cy="50%" innerRadius={50} outerRadius={80}
+                        paddingAngle={3} dataKey="value">
+                        {pieData.map((entry) => (
+                          <Cell key={entry.name} fill={PIE_COLORS[entry.name] || '#94A3B8'} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value, name) => [value, name]} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="flex-1 space-y-2">
+                    {pieData.map((entry) => (
+                      <div key={entry.name} className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="w-3 h-3 rounded-full flex-shrink-0"
+                            style={{ background: PIE_COLORS[entry.name] || '#94A3B8' }} />
+                          <span className="text-sm text-gray-600">{entry.name}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-semibold text-gray-900">{entry.value}</span>
+                          <span className="text-xs text-gray-400">
+                            ({live.total_leads > 0
+                              ? ((entry.value / live.total_leads) * 100).toFixed(0)
+                              : 0}%)
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm font-semibold text-emerald-800">
-                    Melhor período: {formatMonth(melhorMes.periodo_inicio)}
-                  </p>
-                  <p className="text-xs text-emerald-600">
-                    {melhorMes.leads_convertidos} conversões de {melhorMes.total_leads} leads
-                    ({melhorMes.total_leads > 0
-                      ? ((melhorMes.leads_convertidos / melhorMes.total_leads) * 100).toFixed(1)
-                      : 0}% de conversão)
-                  </p>
-                </div>
-              </div>
+              ) : (
+                <p className="text-sm text-gray-400 text-center py-8">Nenhum lead cadastrado</p>
+              )}
             </Card>
-          )}
+
+            {/* Origem dos leads */}
+            <Card className="p-6">
+              <h3 className="text-base font-semibold text-gray-800 mb-5">Origem dos Leads</h3>
+              {live.por_origem && Object.keys(live.por_origem).length > 0 ? (
+                <div className="space-y-3">
+                  {Object.entries(live.por_origem)
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([origem, count]) => {
+                      const pct = live.total_leads > 0
+                        ? Math.round((count / live.total_leads) * 100)
+                        : 0;
+                      return (
+                        <div key={origem}>
+                          <div className="flex justify-between text-sm mb-1">
+                            <span className="text-gray-600 truncate">{origem}</span>
+                            <span className="text-gray-800 font-medium ml-2">{count} ({pct}%)</span>
+                          </div>
+                          <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-primary-500 rounded-full transition-all"
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-400 text-center py-8">Sem dados de origem</p>
+              )}
+            </Card>
+          </div>
+        </>
+      )}
+
+      {/* === HISTÓRICO === */}
+      {reports.length > 0 && (
+        <>
+          <div className="flex items-center gap-2 pt-2">
+            <TrendingUp className="w-4 h-4 text-blue-500" />
+            <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
+              Histórico por Período
+            </h2>
+          </div>
 
           {/* Gráfico: Evolução de leads */}
           <Card className="p-6">
@@ -261,7 +359,7 @@ export default function ReportsPage() {
               className="w-full flex items-center justify-between px-6 py-4 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
               onClick={() => setShowTable(!showTable)}
             >
-              <span>Dados detalhados por período</span>
+              <span>Dados detalhados por período ({reports.length} registros)</span>
               {showTable ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </button>
 
@@ -328,6 +426,17 @@ export default function ReportsPage() {
             )}
           </Card>
         </>
+      )}
+
+      {/* Estado vazio (sem histórico) */}
+      {reports.length === 0 && (
+        <Card className="p-8 text-center">
+          <TrendingUp className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+          <p className="text-gray-500 font-medium">Nenhum período salvo ainda</p>
+          <p className="text-sm text-gray-400 mt-1">
+            Clique em "Salvar Período" para guardar um snapshot no histórico
+          </p>
+        </Card>
       )}
     </div>
   );
