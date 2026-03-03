@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './contexts/AuthContext';
@@ -13,7 +14,18 @@ import SettingsPage from './pages/SettingsPage';
 import MessageConfigPage from './pages/MessageConfigPage';
 import NotFoundPage from './pages/NotFoundPage';
 
+// Ping o backend a cada 10 minutos para evitar hibernate no Render free tier
+const PING_INTERVAL = 10 * 60 * 1000;
+
 export default function App() {
+  useEffect(() => {
+    const apiBase = (import.meta.env.VITE_API_URL || '/api/v1').replace(/\/api\/v1$/, '');
+    const ping = () => fetch(`${apiBase}/health`).catch(() => {});
+    ping();
+    const id = setInterval(ping, PING_INTERVAL);
+    return () => clearInterval(id);
+  }, []);
+
   return (
     <BrowserRouter>
       <AuthProvider>
