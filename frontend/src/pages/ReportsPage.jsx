@@ -217,7 +217,7 @@ export default function ReportsPage() {
               subtitle={`${live.mensagens_recebidas} recebidas`}
               color={{ bg: 'bg-amber-50', text: 'text-amber-600' }} icon={Send} />
             <StatCard title="Taxa de Resposta" value={`${live.taxa_resposta}%`}
-              subtitle="respostas / enviadas (mês)"
+              subtitle="leads que responderam / total"
               color={{ bg: 'bg-purple-50', text: 'text-purple-600' }} icon={MessageSquare} />
           </div>
 

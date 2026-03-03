@@ -107,11 +107,12 @@ async function getLive(req, res, next) {
       porStatus[lead.status] = (porStatus[lead.status] || 0) + 1;
     });
 
-    // Mensagens do mes
+    // Mensagens do mes — apenas de leads que ainda existem (lead_id not null)
     const { count: mensagensEnviadas } = await supabase
       .from('mensagens_log')
       .select('id', { count: 'exact' })
       .eq('direcao', 'enviada')
+      .not('lead_id', 'is', null)
       .gte('criado_em', startDate)
       .lte('criado_em', endDate);
 
@@ -119,11 +120,15 @@ async function getLive(req, res, next) {
       .from('mensagens_log')
       .select('id', { count: 'exact' })
       .eq('direcao', 'recebida')
+      .not('lead_id', 'is', null)
       .gte('criado_em', startDate)
       .lte('criado_em', endDate);
 
-    const taxaResposta = mensagensEnviadas > 0
-      ? ((mensagensRecebidas / mensagensEnviadas) * 100).toFixed(1)
+    // Taxa de resposta = leads que responderam (ou convertidos/perdidos após responder)
+    // sobre o total de leads — métrica por lead, não por mensagem
+    const leadsQueResponderam = leadsResponderam + leadsConvertidos + leadsPerdidos;
+    const taxaResposta = totalLeads > 0
+      ? ((leadsQueResponderam / totalLeads) * 100).toFixed(1)
       : '0.0';
 
     const taxaConversao = totalLeads > 0
