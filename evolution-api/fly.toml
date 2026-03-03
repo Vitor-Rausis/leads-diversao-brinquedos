@@ -1,0 +1,43 @@
+app = "leads-diversao-evolution"
+primary_region = "iad"
+
+[build]
+  image = "registry.fly.io/leads-diversao-evolution:v2.3.7-fly"
+
+[env]
+  SERVER_TYPE = "https"
+  SERVER_PORT = "8080"
+  CORS_ORIGIN = "*"
+  CORS_METHODS = "POST,GET,PUT,DELETE"
+  CORS_CREDENTIALS = "true"
+  LOG_LEVEL = "ERROR"
+  LOG_COLOR = "true"
+  DEL_INSTANCE = "false"
+  AUTHENTICATION_TYPE = "apikey"
+  AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES = "true"
+  DATABASE_ENABLED = "true"
+  DATABASE_PROVIDER = "postgresql"
+  DATABASE_CONNECTION_CLIENT_NAME = "evolution_api"
+  DATABASE_SAVE_DATA_INSTANCE = "true"
+  DATABASE_SAVE_DATA_NEW_MESSAGE = "false"
+  DATABASE_SAVE_MESSAGE_UPDATE = "false"
+  DATABASE_SAVE_DATA_CONTACTS = "false"
+  DATABASE_SAVE_DATA_CHATS = "false"
+  CONFIG_SESSION_PHONE_VERSION = "2.3000.0"
+  CACHE_REDIS_ENABLED = "false"
+  CACHE_LOCAL_ENABLED = "true"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"
+
+[[mounts]]
+  source = "evolution_instances"
+  destination = "/evolution/instances"
