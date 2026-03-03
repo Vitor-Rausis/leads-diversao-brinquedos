@@ -89,6 +89,16 @@ export default function LeadsPage() {
     }
   };
 
+  const handleStatusChange = async (lead, novoStatus) => {
+    try {
+      await updateLead(lead.id, { status: novoStatus });
+      toast.success(`${lead.nome} marcado como ${novoStatus}`);
+      loadLeads();
+    } catch (err) {
+      toast.error('Erro ao atualizar status');
+    }
+  };
+
   const handleCloseForm = () => {
     setFormOpen(false);
     setEditingLead(null);
@@ -126,6 +136,7 @@ export default function LeadsPage() {
           onPageChange={(p) => setFilters((f) => ({ ...f, page: p }))}
           onEdit={handleEdit}
           onDelete={handleDelete}
+          onStatusChange={handleStatusChange}
         />
       )}
 
