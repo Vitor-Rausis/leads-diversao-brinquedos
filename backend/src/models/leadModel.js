@@ -103,7 +103,7 @@ class LeadModel {
       .from('leads')
       .select('id, nome, status, data_cadastro')
       .eq('whatsapp', whatsapp)
-      .single();
+      .maybeSingle();
 
     if (error) return null;
     return data;

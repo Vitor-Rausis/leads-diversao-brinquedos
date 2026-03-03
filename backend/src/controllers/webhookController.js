@@ -49,26 +49,47 @@ async function handleWhatsAppWebhook(req, res) {
       (msg.documentMessage ? '[documento]' : null) ||
       '[mensagem]';
 
-    // Normaliza número — tenta com DDI (5541...) e sem DDI (41...)
+    // Gera todas as variantes de número para busca
     const digits = whatsappRaw.replace(/\D/g, '');
-    const whatsappFull = digits.startsWith('55') ? digits : '55' + digits;
-    const whatsappShort = whatsappFull.replace(/^55/, '');
-    // Variantes com/sem o 9 extra (celulares brasileiros)
-    const whatsappWith9 = whatsappFull.replace(/^(55\d{2})(\d{8})$/, '$19$2');
-    const whatsappWithout9 = whatsappFull.replace(/^(55\d{2})9(\d{8})$/, '$1$2');
+    const variants = new Set();
 
-    logger.info(`[Webhook] Mensagem de ${whatsappFull}: "${content.substring(0, 60)}"`);
+    // Com DDI 55
+    const withDdi = digits.startsWith('55') ? digits : '55' + digits;
+    variants.add(withDdi);
 
-    // Busca lead tentando todas as variantes de número
-    let lead = await LeadModel.findByWhatsapp(whatsappFull);
-    if (!lead) lead = await LeadModel.findByWhatsapp(whatsappShort);
-    if (!lead && whatsappWith9 !== whatsappFull) lead = await LeadModel.findByWhatsapp(whatsappWith9);
-    if (!lead && whatsappWithout9 !== whatsappFull) lead = await LeadModel.findByWhatsapp(whatsappWithout9);
+    // Sem DDI 55
+    const withoutDdi = withDdi.replace(/^55/, '');
+    variants.add(withoutDdi);
 
-    // Registra no log de mensagens
+    // Com 9 extra (celular BR: 55 + DDD 2 dígitos + 9 + 8 dígitos)
+    const with9 = withDdi.replace(/^(55\d{2})(\d{8})$/, '$19$2');
+    if (with9 !== withDdi) variants.add(with9);
+
+    // Sem 9 extra
+    const without9 = withDdi.replace(/^(55\d{2})9(\d{8})$/, '$1$2');
+    if (without9 !== withDdi) variants.add(without9);
+
+    // Sem DDI + com/sem 9
+    variants.add(with9.replace(/^55/, ''));
+    variants.add(without9.replace(/^55/, ''));
+
+    logger.info(`[Webhook] Mensagem de ${withDdi}: "${content.substring(0, 60)}"`);
+    logger.info(`[Webhook] Variantes buscadas: ${[...variants].join(', ')}`);
+
+    // Busca lead tentando todas as variantes
+    let lead = null;
+    for (const variant of variants) {
+      lead = await LeadModel.findByWhatsapp(variant);
+      if (lead) {
+        logger.info(`[Webhook] Lead encontrado pela variante: "${variant}" -> ${lead.nome}`);
+        break;
+      }
+    }
+
+    // Registra no log de mensagens (mesmo sem lead associado)
     await MessageModel.createLog({
       lead_id: lead?.id || null,
-      whatsapp: whatsappFull,
+      whatsapp: withDdi,
       direcao: 'recebida',
       conteudo: content,
       metadata: {
@@ -76,11 +97,18 @@ async function handleWhatsAppWebhook(req, res) {
         messageId: key.id,
         pushName: data.pushName || null,
         timestamp: data.messageTimestamp,
+        varianteEncontrada: lead ? null : 'nenhuma',
       },
     });
 
-    // Se lead existe e está em automação ativa, marca como Respondeu e pausa envios
-    if (lead && ['Novo', 'Em Contato'].includes(lead.status)) {
+    if (!lead) {
+      logger.warn(`[Webhook] Nenhum lead encontrado para ${withDdi}. Variantes: ${[...variants].join(', ')}`);
+      return;
+    }
+
+    // Atualiza status para Respondeu se não estiver em status final
+    const FINAL_STATUSES = ['Convertido', 'Perdido'];
+    if (!FINAL_STATUSES.includes(lead.status)) {
       await supabase
         .from('leads')
         .update({ status: 'Respondeu' })
@@ -88,7 +116,9 @@ async function handleWhatsAppWebhook(req, res) {
 
       await MessageModel.cancelPendingForLead(lead.id);
 
-      logger.info(`[Webhook] Lead "${lead.nome}" respondeu. Status -> Respondeu, automações pausadas.`);
+      logger.info(`[Webhook] Lead "${lead.nome}" (${lead.status}) -> Respondeu. Automações pausadas.`);
+    } else {
+      logger.info(`[Webhook] Lead "${lead.nome}" já em status final (${lead.status}). Sem alteração.`);
     }
   } catch (err) {
     logger.error('[Webhook] Erro ao processar evento:', err);
