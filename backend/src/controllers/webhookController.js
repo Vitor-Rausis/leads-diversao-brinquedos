@@ -21,8 +21,30 @@ async function handleWhatsAppWebhook(req, res) {
 
     const key = data.key || {};
 
-    // Ignora mensagens enviadas por nós
-    if (key.fromMe === true) return;
+    // Se mensagem enviada por nós, atualiza atualizado_em do lead (limpa alerta "Esquecido")
+    if (key.fromMe === true) {
+      const digitsMe = (key.remoteJid || '')
+        .replace(/@s\.whatsapp\.net$/, '')
+        .replace(/@c\.us$/, '')
+        .replace(/\D/g, '');
+      if (digitsMe) {
+        const withDdiMe = digitsMe.startsWith('55') ? digitsMe : '55' + digitsMe;
+        const variantsMe = new Set([
+          withDdiMe,
+          withDdiMe.replace(/^55/, ''),
+          withDdiMe.replace(/^(55\d{2})(\d{8})$/, '$19$2'),
+          withDdiMe.replace(/^(55\d{2})9(\d{8})$/, '$1$2'),
+        ]);
+        for (const v of variantsMe) {
+          const found = await LeadModel.findByWhatsapp(v);
+          if (found) {
+            await supabase.from('leads').update({ atualizado_em: new Date().toISOString() }).eq('id', found.id);
+            break;
+          }
+        }
+      }
+      return;
+    }
 
     const remoteJid = key.remoteJid || '';
 
@@ -123,7 +145,7 @@ async function handleWhatsAppWebhook(req, res) {
     if (!FINAL_STATUSES.includes(lead.status)) {
       await supabase
         .from('leads')
-        .update({ status: 'Respondeu' })
+        .update({ status: 'Respondeu', atualizado_em: new Date().toISOString() })
         .eq('id', lead.id);
 
       await MessageModel.cancelPendingForLead(lead.id);
