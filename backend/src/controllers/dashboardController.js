@@ -8,13 +8,15 @@ async function stats(req, res, next) {
     const mensagensEnviadas = await MessageModel.countSent();
     const mensagensRecebidas = await MessageModel.countReceived();
 
+    const leadsResponderam = statusCounts['Respondeu'] || 0;
+
     res.json({
       total_leads: totalLeads,
       por_status: statusCounts,
       mensagens_enviadas: mensagensEnviadas,
       mensagens_recebidas: mensagensRecebidas,
-      taxa_resposta: mensagensEnviadas > 0
-        ? ((mensagensRecebidas / mensagensEnviadas) * 100).toFixed(1)
+      taxa_resposta: totalLeads > 0
+        ? ((leadsResponderam / totalLeads) * 100).toFixed(1)
         : '0.0',
     });
   } catch (err) {

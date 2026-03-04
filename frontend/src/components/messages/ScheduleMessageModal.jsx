@@ -1,27 +1,36 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
-import { createScheduledMessage } from '../../api/messageApi';
+import { createScheduledMessage, updateScheduledMessage } from '../../api/messageApi';
 
-export default function ScheduleMessageModal({ isOpen, onClose, onSuccess, lead }) {
+export default function ScheduleMessageModal({ isOpen, onClose, onSuccess, lead, editingMsg }) {
   const [conteudo, setConteudo] = useState('');
   const [dataHora, setDataHora] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Reseta os campos sempre que o modal abre ou muda o agendamento sendo editado
+  useEffect(() => {
+    if (isOpen) {
+      if (editingMsg) {
+        setConteudo(editingMsg.conteudo_custom || '');
+        const d = new Date(editingMsg.data_agendada);
+        setDataHora(format(d, "yyyy-MM-dd'T'HH:mm"));
+      } else {
+        setConteudo('');
+        setDataHora('');
+      }
+      setError('');
+    }
+  }, [isOpen, editingMsg]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
-    if (!conteudo.trim()) {
-      setError('Escreva a mensagem');
-      return;
-    }
-    if (!dataHora) {
-      setError('Informe a data e hora');
-      return;
-    }
+    if (!conteudo.trim()) { setError('Escreva a mensagem'); return; }
+    if (!dataHora) { setError('Informe a data e hora'); return; }
 
     const dataAgendada = new Date(dataHora).toISOString();
     if (new Date(dataAgendada) <= new Date()) {
@@ -31,15 +40,22 @@ export default function ScheduleMessageModal({ isOpen, onClose, onSuccess, lead 
 
     setLoading(true);
     try {
-      await createScheduledMessage({
-        lead_id: lead.id,
-        tipo: 'dia_3',
-        conteudo_custom: conteudo.trim(),
-        data_agendada: dataAgendada,
-      });
+      if (editingMsg) {
+        await updateScheduledMessage(editingMsg.id, {
+          conteudo_custom: conteudo.trim(),
+          data_agendada: dataAgendada,
+        });
+      } else {
+        await createScheduledMessage({
+          lead_id: lead.id,
+          tipo: 'dia_3',
+          conteudo_custom: conteudo.trim(),
+          data_agendada: dataAgendada,
+        });
+      }
       onSuccess();
     } catch (err) {
-      setError(err.response?.data?.error || 'Erro ao agendar mensagem');
+      setError(err.response?.data?.error || 'Erro ao salvar agendamento');
     } finally {
       setLoading(false);
     }
@@ -53,9 +69,10 @@ export default function ScheduleMessageModal({ isOpen, onClose, onSuccess, lead 
   };
 
   const minDatetime = format(new Date(Date.now() + 60000), "yyyy-MM-dd'T'HH:mm");
+  const isEditing = !!editingMsg;
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="Agendar Mensagem" size="sm">
+    <Modal isOpen={isOpen} onClose={handleClose} title={isEditing ? 'Editar Agendamento' : 'Agendar Mensagem'} size="sm">
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="p-3 bg-gray-50 rounded-lg text-sm text-gray-600">
           <p className="font-medium text-gray-800">{lead?.nome}</p>
@@ -92,7 +109,7 @@ export default function ScheduleMessageModal({ isOpen, onClose, onSuccess, lead 
             Cancelar
           </Button>
           <Button type="submit" loading={loading}>
-            Agendar
+            {isEditing ? 'Salvar' : 'Agendar'}
           </Button>
         </div>
       </form>

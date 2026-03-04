@@ -62,6 +62,18 @@ class MessageModel {
     return data;
   }
 
+  static async updateScheduled(id, { conteudo_custom, data_agendada }) {
+    const { data, error } = await supabase
+      .from('mensagens_agendadas')
+      .update({ conteudo_custom: conteudo_custom || null, data_agendada })
+      .eq('id', id)
+      .eq('status', 'pendente')
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  }
+
   static async cancelPendingForLead(leadId) {
     const { error } = await supabase
       .from('mensagens_agendadas')

@@ -27,6 +27,7 @@ export default function StatsCards({ stats }) {
     {
       title: 'Taxa de Resposta',
       value: `${stats?.taxa_resposta || 0}%`,
+      subtitle: 'responderam / total leads',
       icon: MessageSquare,
       color: 'text-purple-600',
       bg: 'bg-purple-50',
@@ -41,6 +42,7 @@ export default function StatsCards({ stats }) {
             <div>
               <p className="text-sm text-gray-500">{card.title}</p>
               <p className="text-2xl font-bold text-gray-900 mt-1">{card.value}</p>
+              {card.subtitle && <p className="text-xs text-gray-400 mt-0.5">{card.subtitle}</p>}
             </div>
             <div className={`${card.bg} p-3 rounded-xl`}>
               <card.icon className={`w-6 h-6 ${card.color}`} />

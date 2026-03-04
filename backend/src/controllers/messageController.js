@@ -52,4 +52,22 @@ async function listScheduled(req, res, next) {
   }
 }
 
-module.exports = { listLog, listScheduled, createScheduled };
+async function updateScheduled(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { conteudo_custom, data_agendada } = req.body;
+
+    if (!data_agendada) return res.status(400).json({ error: 'data_agendada é obrigatória' });
+    if (new Date(data_agendada) <= new Date()) return res.status(400).json({ error: 'data_agendada deve ser no futuro' });
+    if (conteudo_custom !== undefined && conteudo_custom !== null && conteudo_custom.trim() === '') {
+      return res.status(400).json({ error: 'conteudo_custom não pode ser vazio' });
+    }
+
+    const result = await MessageModel.updateScheduled(id, { conteudo_custom, data_agendada });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { listLog, listScheduled, createScheduled, updateScheduled };

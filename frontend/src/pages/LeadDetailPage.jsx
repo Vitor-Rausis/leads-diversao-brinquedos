@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Phone, Calendar, Tag, MessageSquare, Clock, Plus } from 'lucide-react';
+import { ArrowLeft, Phone, Calendar, Tag, MessageSquare, Clock, Plus, Pencil } from 'lucide-react';
 import { getLead } from '../api/leadApi';
 import Badge from '../components/ui/Badge';
 import Card from '../components/ui/Card';
@@ -15,6 +15,7 @@ export default function LeadDetailPage() {
   const [lead, setLead] = useState(null);
   const [loading, setLoading] = useState(true);
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
+  const [editingMsg, setEditingMsg] = useState(null);
 
   useEffect(() => {
     loadLead();
@@ -29,6 +30,27 @@ export default function LeadDetailPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleOpenNew = () => {
+    setEditingMsg(null);
+    setScheduleModalOpen(true);
+  };
+
+  const handleOpenEdit = (msg) => {
+    setEditingMsg(msg);
+    setScheduleModalOpen(true);
+  };
+
+  const handleModalSuccess = () => {
+    loadLead();
+    setScheduleModalOpen(false);
+    setEditingMsg(null);
+  };
+
+  const handleModalClose = () => {
+    setScheduleModalOpen(false);
+    setEditingMsg(null);
   };
 
   if (loading) return <Spinner size="lg" />;
@@ -78,7 +100,7 @@ export default function LeadDetailPage() {
               <Clock className="w-5 h-5 text-primary-500" />
               Mensagens Agendadas
             </h2>
-            <Button size="sm" onClick={() => setScheduleModalOpen(true)}>
+            <Button size="sm" onClick={handleOpenNew}>
               <Plus className="w-3.5 h-3.5" />
               Agendar
             </Button>
@@ -103,7 +125,18 @@ export default function LeadDetailPage() {
                       Agendada: {msg.data_agendada ? format(new Date(msg.data_agendada), 'dd/MM/yyyy HH:mm') : '-'}
                     </p>
                   </div>
-                  <Badge status={msg.status} />
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <Badge status={msg.status} />
+                    {msg.status === 'pendente' && (
+                      <button
+                        onClick={() => handleOpenEdit(msg)}
+                        className="p-1 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded transition-colors"
+                        title="Editar agendamento"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -148,9 +181,10 @@ export default function LeadDetailPage() {
 
       <ScheduleMessageModal
         isOpen={scheduleModalOpen}
-        onClose={() => setScheduleModalOpen(false)}
-        onSuccess={() => { loadLead(); setScheduleModalOpen(false); }}
+        onClose={handleModalClose}
+        onSuccess={handleModalSuccess}
         lead={lead}
+        editingMsg={editingMsg}
       />
     </div>
   );
