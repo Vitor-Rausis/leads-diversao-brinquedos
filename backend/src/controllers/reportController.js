@@ -124,11 +124,10 @@ async function getLive(req, res, next) {
       .gte('criado_em', startDate)
       .lte('criado_em', endDate);
 
-    // Taxa de resposta = leads que responderam (ou convertidos/perdidos após responder)
-    // sobre o total de leads — métrica por lead, não por mensagem
-    const leadsQueResponderam = leadsResponderam + leadsConvertidos + leadsPerdidos;
+    // Taxa de resposta = leads com status Respondeu / total de leads
+    // Não inclui Convertido/Perdido pois podem ter sido marcados manualmente
     const taxaResposta = totalLeads > 0
-      ? ((leadsQueResponderam / totalLeads) * 100).toFixed(1)
+      ? ((leadsResponderam / totalLeads) * 100).toFixed(1)
       : '0.0';
 
     const taxaConversao = totalLeads > 0

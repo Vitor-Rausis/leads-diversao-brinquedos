@@ -106,6 +106,18 @@ async function handleWhatsAppWebhook(req, res) {
       return;
     }
 
+    // Só marca como Respondeu se o sistema já enviou ao menos uma mensagem ao lead
+    const { count: enviadas } = await supabase
+      .from('mensagens_log')
+      .select('id', { count: 'exact' })
+      .eq('lead_id', lead.id)
+      .eq('direcao', 'enviada');
+
+    if (!enviadas || enviadas === 0) {
+      logger.info(`[Webhook] Lead "${lead.nome}" respondeu mas sistema ainda não enviou mensagem. Ignorado.`);
+      return;
+    }
+
     // Atualiza status para Respondeu se não estiver em status final
     const FINAL_STATUSES = ['Convertido', 'Perdido'];
     if (!FINAL_STATUSES.includes(lead.status)) {

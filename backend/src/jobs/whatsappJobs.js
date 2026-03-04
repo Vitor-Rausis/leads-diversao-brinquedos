@@ -89,12 +89,12 @@ async function processScheduledMessages() {
         metadata: { messageId: result.messageId },
       });
 
-      if (lead.status === 'Novo') {
-        await supabase
-          .from('leads')
-          .update({ status: 'Em Contato' })
-          .eq('id', lead.id);
-      }
+      // Atualiza atualizado_em sempre que mensagem é enviada (usado pelo alerta "Esquecido")
+      // Se ainda era Novo, avança para Em Contato
+      await supabase
+        .from('leads')
+        .update(lead.status === 'Novo' ? { status: 'Em Contato' } : { atualizado_em: new Date().toISOString() })
+        .eq('id', lead.id);
 
       sent++;
     } else {
