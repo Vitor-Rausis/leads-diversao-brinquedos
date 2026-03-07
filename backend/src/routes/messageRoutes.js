@@ -9,5 +9,6 @@ router.get('/', messageController.listLog);
 router.get('/scheduled', messageController.listScheduled);
 router.post('/scheduled', messageController.createScheduled);
 router.put('/scheduled/:id', messageController.updateScheduled);
+router.delete('/scheduled/:id', messageController.cancelScheduled);
 
 module.exports = router;

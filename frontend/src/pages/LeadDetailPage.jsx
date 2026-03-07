@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Phone, Calendar, Tag, MessageSquare, Clock, Plus, Pencil } from 'lucide-react';
+import { ArrowLeft, Phone, Calendar, Tag, MessageSquare, Clock, Plus, Pencil, X } from 'lucide-react';
 import { getLead } from '../api/leadApi';
+import { cancelScheduledMessage } from '../api/messageApi';
 import Badge from '../components/ui/Badge';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
@@ -51,6 +52,16 @@ export default function LeadDetailPage() {
   const handleModalClose = () => {
     setScheduleModalOpen(false);
     setEditingMsg(null);
+  };
+
+  const handleCancelMsg = async (msgId) => {
+    if (!window.confirm('Cancelar esta mensagem agendada?')) return;
+    try {
+      await cancelScheduledMessage(msgId);
+      loadLead();
+    } catch (err) {
+      console.error('Erro ao cancelar mensagem:', err);
+    }
   };
 
   if (loading) return <Spinner size="lg" />;
@@ -128,13 +139,22 @@ export default function LeadDetailPage() {
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <Badge status={msg.status} />
                     {msg.status === 'pendente' && (
-                      <button
-                        onClick={() => handleOpenEdit(msg)}
-                        className="p-1 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded transition-colors"
-                        title="Editar agendamento"
-                      >
-                        <Pencil className="w-3.5 h-3.5" />
-                      </button>
+                      <>
+                        <button
+                          onClick={() => handleOpenEdit(msg)}
+                          className="p-1 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded transition-colors"
+                          title="Editar agendamento"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleCancelMsg(msg.id)}
+                          className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                          title="Cancelar agendamento"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </>
                     )}
                   </div>
                 </div>

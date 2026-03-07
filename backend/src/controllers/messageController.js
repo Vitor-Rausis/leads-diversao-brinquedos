@@ -70,4 +70,14 @@ async function updateScheduled(req, res, next) {
   }
 }
 
-module.exports = { listLog, listScheduled, createScheduled, updateScheduled };
+async function cancelScheduled(req, res, next) {
+  try {
+    const { id } = req.params;
+    const result = await MessageModel.cancelScheduled(id);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { listLog, listScheduled, createScheduled, updateScheduled, cancelScheduled };

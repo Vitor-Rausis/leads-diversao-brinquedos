@@ -84,6 +84,18 @@ class MessageModel {
     if (error) throw error;
   }
 
+  static async cancelScheduled(id) {
+    const { data, error } = await supabase
+      .from('mensagens_agendadas')
+      .update({ status: 'cancelada' })
+      .eq('id', id)
+      .eq('status', 'pendente')
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  }
+
   static async countSent(startDate, endDate) {
     let query = supabase
       .from('mensagens_log')
