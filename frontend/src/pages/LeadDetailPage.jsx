@@ -166,13 +166,13 @@ export default function LeadDetailPage() {
         </Card>
 
         {/* Histórico de Mensagens */}
-        <Card className="p-6 flex flex-col">
-          <h2 className="text-base font-semibold text-gray-800 mb-4 flex items-center gap-2">
+        <Card className="p-6 flex flex-col" style={{ minHeight: 0 }}>
+          <h2 className="text-base font-semibold text-gray-800 mb-4 flex items-center gap-2 flex-shrink-0">
             <MessageSquare className="w-5 h-5 text-primary-500" />
             Histórico de Mensagens
           </h2>
           {lead.mensagens_log?.length > 0 ? (
-            <div className="flex flex-col gap-2 overflow-y-auto flex-1 min-h-0 pr-1" style={{ maxHeight: '480px' }}>
+            <div className="flex flex-col gap-2 overflow-y-auto flex-1 min-h-0 pr-1">
               {[...lead.mensagens_log].reverse().map((msg) => {
                 const enviada = msg.direcao === 'enviada';
                 return (
