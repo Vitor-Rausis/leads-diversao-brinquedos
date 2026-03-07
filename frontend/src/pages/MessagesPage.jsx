@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { getMessages, getScheduledMessages } from '../api/messageApi';
+import { getMessages, getScheduledMessages, cancelScheduledMessage } from '../api/messageApi';
 import { format } from 'date-fns';
-import { Send, Inbox, Clock } from 'lucide-react';
+import { Send, Inbox, Clock, X } from 'lucide-react';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import Select from '../components/ui/Select';
@@ -21,6 +21,16 @@ export default function MessagesPage() {
   useEffect(() => {
     loadMessages();
   }, [tab, page, direcao, scheduledStatus]);
+
+  const handleCancel = async (id) => {
+    if (!window.confirm('Cancelar esta mensagem agendada?')) return;
+    try {
+      await cancelScheduledMessage(id);
+      loadMessages();
+    } catch (err) {
+      console.error('Erro ao cancelar:', err);
+    }
+  };
 
   const loadMessages = async () => {
     try {
@@ -164,6 +174,7 @@ export default function MessagesPage() {
                   <th className="px-4 py-3 text-left font-medium text-gray-600">Agendada para</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600">Status</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600">Tentativas</th>
+                  <th className="px-4 py-3" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -184,6 +195,17 @@ export default function MessagesPage() {
                       <Badge status={msg.status} />
                     </td>
                     <td className="px-4 py-3 text-gray-600">{msg.tentativas}</td>
+                    <td className="px-4 py-3 text-right">
+                      {msg.status === 'pendente' && (
+                        <button
+                          onClick={() => handleCancel(msg.id)}
+                          className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                          title="Cancelar agendamento"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>

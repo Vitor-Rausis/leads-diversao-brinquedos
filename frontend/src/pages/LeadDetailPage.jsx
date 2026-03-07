@@ -103,7 +103,7 @@ export default function LeadDetailPage() {
         )}
       </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
         {/* Mensagens Agendadas */}
         <Card className="p-6">
           <div className="flex items-center justify-between mb-4">
@@ -172,7 +172,7 @@ export default function LeadDetailPage() {
             Histórico de Mensagens
           </h2>
           {lead.mensagens_log?.length > 0 ? (
-            <div className="flex flex-col gap-2 flex-1 overflow-y-auto pr-1">
+            <div className="flex flex-col gap-2 overflow-y-auto flex-1 min-h-0 pr-1" style={{ maxHeight: '480px' }}>
               {[...lead.mensagens_log].reverse().map((msg) => {
                 const enviada = msg.direcao === 'enviada';
                 return (
