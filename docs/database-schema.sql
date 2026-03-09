@@ -79,8 +79,12 @@ CREATE TABLE mensagens_agendadas (
     tentativas INT DEFAULT 0,
     erro_detalhe TEXT,
     enviada_em TIMESTAMPTZ,
+    metadata JSONB,
     criado_em TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Para adicionar a coluna em banco existente:
+-- ALTER TABLE mensagens_agendadas ADD COLUMN IF NOT EXISTS metadata JSONB;
 
 CREATE INDEX idx_msg_agendadas_status ON mensagens_agendadas(status);
 CREATE INDEX idx_msg_agendadas_data ON mensagens_agendadas(data_agendada);

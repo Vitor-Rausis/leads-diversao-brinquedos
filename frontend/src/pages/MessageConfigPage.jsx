@@ -3,6 +3,7 @@ import { configApi } from '../api/configApi';
 import toast from 'react-hot-toast';
 import { Save, Clock, Calendar, MessageSquare, ToggleLeft, ToggleRight, CalendarPlus } from 'lucide-react';
 import BulkScheduleModal from '../components/messages/BulkScheduleModal';
+import BulkScheduleSummary from '../components/messages/BulkScheduleSummary';
 
 const tipoLabels = {
   dia_3: 'Primeira Mensagem',
@@ -16,6 +17,7 @@ export default function MessageConfigPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [bulkModal, setBulkModal] = useState({ open: false, message: '' });
+  const [bulkSummaryKey, setBulkSummaryKey] = useState(0);
 
   useEffect(() => {
     loadConfigs();
@@ -186,6 +188,7 @@ export default function MessageConfigPage() {
         isOpen={bulkModal.open}
         onClose={() => setBulkModal({ open: false, message: '' })}
         initialMessage={bulkModal.message}
+        onSuccess={() => setBulkSummaryKey(k => k + 1)}
       />
 
       {/* Templates de Mensagem */}
@@ -207,6 +210,12 @@ export default function MessageConfigPage() {
         <p className="text-sm text-gray-600 mb-4">
           Use <code className="bg-gray-100 px-1 rounded">{'{{nome}}'}</code> para inserir o nome do lead automaticamente.
         </p>
+
+        {/* Agendamentos em massa pendentes */}
+        <div className="mb-6">
+          <h3 className="text-sm font-medium text-gray-700 mb-2">Agendamentos em massa pendentes</h3>
+          <BulkScheduleSummary key={bulkSummaryKey} onRefresh={() => setBulkSummaryKey(k => k + 1)} />
+        </div>
 
         <div className="space-y-4">
           {templates.map((template) => (

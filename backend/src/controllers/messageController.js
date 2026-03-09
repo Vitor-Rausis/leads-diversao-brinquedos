@@ -116,6 +116,13 @@ async function bulkScheduled(req, res, next) {
     }
 
     // Cria mensagens agendadas em lote
+    const metadata = {
+      origem: 'massa',
+      status_leads,
+      agendado_por: req.user?.id || null,
+      agendado_em: new Date().toISOString(),
+    };
+
     const rows = leads.map((lead) => ({
       lead_id: lead.id,
       tipo: 'mes_10',
@@ -124,6 +131,7 @@ async function bulkScheduled(req, res, next) {
       forcar_envio: true,
       status: 'pendente',
       tentativas: 0,
+      metadata,
     }));
 
     const { data: inserted, error: insertError } = await supabase
@@ -139,4 +147,63 @@ async function bulkScheduled(req, res, next) {
   }
 }
 
-module.exports = { listLog, listScheduled, createScheduled, updateScheduled, cancelScheduled, bulkScheduled };
+// Retorna agendamentos em massa pendentes, agrupados por conteudo+data
+async function listBulkSummary(req, res, next) {
+  try {
+    const { data, error } = await supabase
+      .from('mensagens_agendadas')
+      .select('id, conteudo_custom, data_agendada, status, metadata, criado_em')
+      .eq('forcar_envio', true)
+      .eq('status', 'pendente')
+      .not('metadata->>origem', 'is', null)
+      .eq('metadata->>origem', 'massa')
+      .order('data_agendada', { ascending: true });
+
+    if (error) throw error;
+
+    // Agrupa por conteudo_custom + data_agendada (mesmo batch)
+    const groups = {};
+    for (const row of data || []) {
+      const key = `${row.data_agendada}||${row.conteudo_custom}`;
+      if (!groups[key]) {
+        groups[key] = {
+          conteudo: row.conteudo_custom,
+          data_agendada: row.data_agendada,
+          status_leads: row.metadata?.status_leads || [],
+          agendado_em: row.metadata?.agendado_em || row.criado_em,
+          total: 0,
+          ids: [],
+        };
+      }
+      groups[key].total++;
+      groups[key].ids.push(row.id);
+    }
+
+    res.json(Object.values(groups));
+  } catch (err) {
+    next(err);
+  }
+}
+
+// Cancela todos os agendamentos em massa de um batch (mesmo conteudo + data)
+async function cancelBulkBatch(req, res, next) {
+  try {
+    const { ids } = req.body;
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'ids é obrigatório' });
+    }
+
+    const { error } = await supabase
+      .from('mensagens_agendadas')
+      .update({ status: 'cancelada' })
+      .in('id', ids)
+      .eq('status', 'pendente');
+
+    if (error) throw error;
+    res.json({ canceladas: ids.length });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { listLog, listScheduled, createScheduled, updateScheduled, cancelScheduled, bulkScheduled, listBulkSummary, cancelBulkBatch };
