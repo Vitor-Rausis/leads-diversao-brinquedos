@@ -190,10 +190,19 @@ export default function MessageConfigPage() {
 
       {/* Templates de Mensagem */}
       <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2 mb-4">
-          <MessageSquare className="w-5 h-5 text-primary-600" />
-          Templates de Mensagem
-        </h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <MessageSquare className="w-5 h-5 text-primary-600" />
+            Templates de Mensagem
+          </h2>
+          <button
+            onClick={() => setBulkModal({ open: true, message: '' })}
+            className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm font-medium transition-colors"
+          >
+            <CalendarPlus className="w-4 h-4" />
+            Agendar em massa
+          </button>
+        </div>
 
         <p className="text-sm text-gray-600 mb-4">
           Use <code className="bg-gray-100 px-1 rounded">{'{{nome}}'}</code> para inserir o nome do lead automaticamente.
@@ -209,23 +218,13 @@ export default function MessageConfigPage() {
                 <h3 className="font-medium text-gray-900">
                   {tipoLabels[template.tipo] || template.tipo}
                 </h3>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setBulkModal({ open: true, message: template.conteudo })}
-                    className="flex items-center gap-1 px-3 py-1 text-sm text-gray-600 hover:bg-gray-100 rounded-lg"
-                    title="Agendar este template em massa"
-                  >
-                    <CalendarPlus className="w-4 h-4" />
-                    Agendar em massa
-                  </button>
-                  <button
-                    onClick={() => handleSaveTemplate(template.tipo)}
-                    className="flex items-center gap-1 px-3 py-1 text-sm text-primary-600 hover:bg-primary-50 rounded-lg"
-                  >
-                    <Save className="w-4 h-4" />
-                    Salvar
-                  </button>
-                </div>
+                <button
+                  onClick={() => handleSaveTemplate(template.tipo)}
+                  className="flex items-center gap-1 px-3 py-1 text-sm text-primary-600 hover:bg-primary-50 rounded-lg"
+                >
+                  <Save className="w-4 h-4" />
+                  Salvar
+                </button>
               </div>
 
               <textarea
