@@ -197,9 +197,15 @@ export default function MessagesPage() {
                       {msg.leads?.nome || '-'}
                     </td>
                     <td className="px-4 py-3 text-gray-600">
-                      {msg.tipo === 'dia_3' && '3 dias'}
-                      {msg.tipo === 'dia_7' && '7 dias'}
-                      {msg.tipo === 'mes_10' && '10 meses'}
+                      {msg.forcar_envio ? (
+                        <span className="text-primary-600 font-medium">Manual</span>
+                      ) : (
+                        <>
+                          {msg.tipo === 'dia_3' && '3 dias'}
+                          {msg.tipo === 'dia_7' && '7 dias'}
+                          {msg.tipo === 'mes_10' && '10 meses'}
+                        </>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-gray-500 text-xs">
                       {msg.data_agendada ? format(new Date(msg.data_agendada), 'dd/MM/yyyy HH:mm') : '-'}

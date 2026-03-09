@@ -48,7 +48,7 @@ export default function ScheduleMessageModal({ isOpen, onClose, onSuccess, lead,
       } else {
         await createScheduledMessage({
           lead_id: lead.id,
-          tipo: 'dia_3',
+          tipo: 'mes_10',
           conteudo_custom: conteudo.trim(),
           data_agendada: dataAgendada,
         });
