@@ -134,9 +134,7 @@ async function pollIncomingMessages() {
           .update({ status: 'Respondeu' })
           .eq('id', lead.id);
 
-        await MessageModel.cancelPendingForLead(lead.id);
-
-        logger.info(`[Polling] Lead "${lead.nome}" respondeu. Status -> Respondeu, automações pausadas.`);
+        logger.info(`[Polling] Lead "${lead.nome}" respondeu. Status -> Respondeu.`);
       }
     }
 

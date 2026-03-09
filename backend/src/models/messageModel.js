@@ -84,6 +84,18 @@ class MessageModel {
     if (error) throw error;
   }
 
+  // Cancela apenas dia_3 e dia_7, preservando mes_10 (usada ao marcar Convertido/Perdido)
+  static async cancelNonFinalMessagesForLead(leadId) {
+    const { error } = await supabase
+      .from('mensagens_agendadas')
+      .update({ status: 'cancelada' })
+      .eq('lead_id', leadId)
+      .eq('status', 'pendente')
+      .in('tipo', ['dia_3', 'dia_7']);
+
+    if (error) throw error;
+  }
+
   static async cancelScheduled(id) {
     const { data, error } = await supabase
       .from('mensagens_agendadas')

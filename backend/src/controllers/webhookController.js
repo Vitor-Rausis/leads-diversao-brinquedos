@@ -148,9 +148,7 @@ async function handleWhatsAppWebhook(req, res) {
         .update({ status: 'Respondeu', atualizado_em: new Date().toISOString() })
         .eq('id', lead.id);
 
-      await MessageModel.cancelPendingForLead(lead.id);
-
-      logger.info(`[Webhook] Lead "${lead.nome}" (${lead.status}) -> Respondeu. Automações pausadas.`);
+      logger.info(`[Webhook] Lead "${lead.nome}" (${lead.status}) -> Respondeu.`);
     } else {
       logger.info(`[Webhook] Lead "${lead.nome}" já em status final (${lead.status}). Sem alteração.`);
     }

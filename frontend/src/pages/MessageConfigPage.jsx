@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { configApi } from '../api/configApi';
 import toast from 'react-hot-toast';
-import { Save, Clock, Calendar, MessageSquare, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Save, Clock, Calendar, MessageSquare, ToggleLeft, ToggleRight, CalendarPlus } from 'lucide-react';
+import BulkScheduleModal from '../components/messages/BulkScheduleModal';
 
 const tipoLabels = {
   dia_3: 'Primeira Mensagem',
@@ -14,6 +15,7 @@ export default function MessageConfigPage() {
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [bulkModal, setBulkModal] = useState({ open: false, message: '' });
 
   useEffect(() => {
     loadConfigs();
@@ -180,6 +182,12 @@ export default function MessageConfigPage() {
         </div>
       </div>
 
+      <BulkScheduleModal
+        isOpen={bulkModal.open}
+        onClose={() => setBulkModal({ open: false, message: '' })}
+        initialMessage={bulkModal.message}
+      />
+
       {/* Templates de Mensagem */}
       <div className="bg-white rounded-lg shadow p-6">
         <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2 mb-4">
@@ -201,13 +209,23 @@ export default function MessageConfigPage() {
                 <h3 className="font-medium text-gray-900">
                   {tipoLabels[template.tipo] || template.tipo}
                 </h3>
-                <button
-                  onClick={() => handleSaveTemplate(template.tipo)}
-                  className="flex items-center gap-1 px-3 py-1 text-sm text-primary-600 hover:bg-primary-50 rounded-lg"
-                >
-                  <Save className="w-4 h-4" />
-                  Salvar
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setBulkModal({ open: true, message: template.conteudo })}
+                    className="flex items-center gap-1 px-3 py-1 text-sm text-gray-600 hover:bg-gray-100 rounded-lg"
+                    title="Agendar este template em massa"
+                  >
+                    <CalendarPlus className="w-4 h-4" />
+                    Agendar em massa
+                  </button>
+                  <button
+                    onClick={() => handleSaveTemplate(template.tipo)}
+                    className="flex items-center gap-1 px-3 py-1 text-sm text-primary-600 hover:bg-primary-50 rounded-lg"
+                  >
+                    <Save className="w-4 h-4" />
+                    Salvar
+                  </button>
+                </div>
               </div>
 
               <textarea

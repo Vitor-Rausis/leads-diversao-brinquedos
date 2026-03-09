@@ -1,4 +1,5 @@
 const LeadModel = require('../models/leadModel');
+const MessageModel = require('../models/messageModel');
 const CsvService = require('../services/csvService');
 const { formatPhone } = require('../utils/formatPhone');
 
@@ -53,6 +54,12 @@ async function update(req, res, next) {
       updates.whatsapp = formatPhone(updates.whatsapp);
     }
     const lead = await LeadModel.update(req.params.id, updates);
+
+    // Ao marcar como Convertido ou Perdido, cancela dia_3/dia_7 mas preserva mes_10
+    if (['Convertido', 'Perdido'].includes(updates.status)) {
+      await MessageModel.cancelNonFinalMessagesForLead(req.params.id);
+    }
+
     res.json(lead);
   } catch (err) {
     next(err);

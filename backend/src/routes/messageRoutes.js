@@ -7,6 +7,7 @@ router.use(authMiddleware);
 
 router.get('/', messageController.listLog);
 router.get('/scheduled', messageController.listScheduled);
+router.post('/scheduled/bulk', messageController.bulkScheduled);
 router.post('/scheduled', messageController.createScheduled);
 router.put('/scheduled/:id', messageController.updateScheduled);
 router.delete('/scheduled/:id', messageController.cancelScheduled);

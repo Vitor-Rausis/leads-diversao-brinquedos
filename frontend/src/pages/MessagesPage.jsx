@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
 import { getMessages, getScheduledMessages, cancelScheduledMessage } from '../api/messageApi';
 import { format } from 'date-fns';
-import { Send, Inbox, Clock, X } from 'lucide-react';
+import { Send, Inbox, Clock, X, CalendarPlus } from 'lucide-react';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import Select from '../components/ui/Select';
 import Pagination from '../components/ui/Pagination';
 import Spinner from '../components/ui/Spinner';
 import EmptyState from '../components/ui/EmptyState';
+import BulkScheduleModal from '../components/messages/BulkScheduleModal';
 
 export default function MessagesPage() {
   const [tab, setTab] = useState('log');
@@ -17,6 +18,7 @@ export default function MessagesPage() {
   const [direcao, setDirecao] = useState('');
   const [scheduledStatus, setScheduledStatus] = useState('');
   const [loading, setLoading] = useState(true);
+  const [showBulkModal, setShowBulkModal] = useState(false);
 
   useEffect(() => {
     loadMessages();
@@ -57,9 +59,20 @@ export default function MessagesPage() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Mensagens</h1>
-        <p className="text-sm text-gray-500 mt-1">Histórico de mensagens e agendamentos</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Mensagens</h1>
+          <p className="text-sm text-gray-500 mt-1">Histórico de mensagens e agendamentos</p>
+        </div>
+        {tab === 'scheduled' && (
+          <button
+            onClick={() => setShowBulkModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm font-medium transition-colors"
+          >
+            <CalendarPlus className="w-4 h-4" />
+            Agendar em massa
+          </button>
+        )}
       </div>
 
       {/* Tabs */}
@@ -214,6 +227,11 @@ export default function MessagesPage() {
           <Pagination page={page} total={total} limit={30} onPageChange={setPage} />
         </Card>
       )}
+      <BulkScheduleModal
+        isOpen={showBulkModal}
+        onClose={() => setShowBulkModal(false)}
+        onSuccess={loadMessages}
+      />
     </div>
   );
 }

@@ -47,8 +47,9 @@ async function processScheduledMessages() {
   for (const msg of messages) {
     const lead = msg.leads;
 
-    // Skip if lead is Perdido, Convertido or Respondeu — exceto mensagens com forcar_envio
-    if (!msg.forcar_envio && ['Perdido', 'Convertido', 'Respondeu'].includes(lead.status)) {
+    // Pula mensagens dia_3/dia_7 se lead respondeu, convertido ou perdido — exceto forcar_envio
+    // mes_10 é sempre enviado independente do status (lead reativação)
+    if (!msg.forcar_envio && msg.tipo !== 'mes_10' && ['Perdido', 'Convertido', 'Respondeu'].includes(lead.status)) {
       await supabase
         .from('mensagens_agendadas')
         .update({ status: 'cancelada' })
