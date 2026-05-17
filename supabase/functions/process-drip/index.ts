@@ -54,14 +54,19 @@ Deno.serve(async (_req) => {
       continue;
     }
 
-    // Claim atomico
+    // Claim atomico: muda status para 'sent' IMEDIATAMENTE (com sent_at=NULL como
+    // sentinela "em processamento"). Garante que SELECT WHERE status='pending' de
+    // execucoes concorrentes nao pegue esta linha. Se sendText falhar, revertemos.
     const novaTentativa = item.attempts + 1;
     const { data: claimed } = await supabase
       .from("drip_queue")
-      .update({ attempts: novaTentativa })
+      .update({
+        status: "sent",
+        attempts: novaTentativa,
+        sent_at: null,
+      })
       .eq("id", item.id)
       .eq("status", "pending")
-      .eq("attempts", item.attempts)
       .select("id");
 
     if (!claimed || claimed.length === 0) {
@@ -73,10 +78,10 @@ Deno.serve(async (_req) => {
     const result = await sendText((item as any).lead.whatsapp, message);
 
     if (result.success === true) {
+      // Confirma envio: marca sent_at e message_id (status ja era 'sent')
       await supabase
         .from("drip_queue")
         .update({
-          status: "sent",
           sent_at: new Date().toISOString(),
           message_id: result.messageId ?? null,
         })

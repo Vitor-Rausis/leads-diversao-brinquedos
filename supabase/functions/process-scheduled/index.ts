@@ -81,15 +81,25 @@ Deno.serve(async (_req) => {
       text = template.replace(/\{\{nome\}\}/g, lead.nome);
     }
 
-    // Claim atomico: so envia se ainda for 'pendente' e tentativas nao mudou.
-    // Previne envio duplicado entre execucoes concorrentes.
+    // Claim atomico: muda status para 'enviada' IMEDIATAMENTE (com enviada_em=NULL como
+    // sentinela "em processamento"). Isso garante que SELECT WHERE status='pendente' de
+    // execucoes concorrentes nao pegue esta linha. Se sendText falhar, revertemos.
+    //
+    // Por que nao bastava o claim anterior (so incrementando tentativas):
+    // a query do SELECT filtra apenas por status='pendente', nao por tentativas.
+    // Execucoes paralelas viam a mesma linha como pendente mesmo com tentativas
+    // incrementadas, e o segundo claim (com WHERE tentativas=novo_valor) tambem
+    // passava, resultando em envio duplo.
     const novaTentativa = msg.tentativas + 1;
     const { data: claimed, error: claimErr } = await supabase
       .from("mensagens_agendadas")
-      .update({ tentativas: novaTentativa })
+      .update({
+        status: "enviada",
+        tentativas: novaTentativa,
+        enviada_em: null, // sentinela: claimed mas ainda nao enviada de verdade
+      })
       .eq("id", msg.id)
       .eq("status", "pendente")
-      .eq("tentativas", msg.tentativas)
       .select("id");
 
     if (claimErr) {
@@ -104,9 +114,10 @@ Deno.serve(async (_req) => {
     const result = await sendText(lead.whatsapp, text);
 
     if (result.success === true) {
+      // Confirma envio: marca enviada_em (status ja era 'enviada' do claim)
       await supabase
         .from("mensagens_agendadas")
-        .update({ status: "enviada", enviada_em: new Date().toISOString() })
+        .update({ enviada_em: new Date().toISOString() })
         .eq("id", msg.id);
 
       await supabase.from("mensagens_log").insert({
@@ -129,6 +140,7 @@ Deno.serve(async (_req) => {
 
       sent++;
     } else {
+      // Reverte o claim: volta para 'pendente' (ou marca 'falha' se esgotou retries)
       const errorMsg = result.error;
       await supabase
         .from("mensagens_agendadas")
