@@ -2,7 +2,6 @@ require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
 const app = require('./app');
-const { initScheduler } = require('./jobs/scheduler');
 const evolutionApi = require('./services/evolutionApiService');
 const logger = require('./utils/logger');
 const env = require('./config/env');
@@ -19,9 +18,7 @@ app.listen(PORT, async () => {
   logger.info(`Ambiente: ${env.NODE_ENV}`);
   logger.info(`Frontend dist existe: ${distExists}`);
   logger.info(`Frontend index.html existe: ${indexExists}`);
-
-  // Inicializa scheduler de mensagens
-  initScheduler();
+  logger.info('Cron interno desativado — processamento de mensagens via Supabase pg_cron + Edge Functions.');
 
   // Verifica conexao com Evolution API
   const connected = await evolutionApi.isConnected();

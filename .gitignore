@@ -11,3 +11,10 @@ nul
 backend/src/services/whatsappService.js
 backend/src/services/supabaseAuthState.js
 docs/add-whatsapp-session-table.sql
+
+# Migration pg_cron com service_role_key real — usa o .example como template
+docs/pg-cron-migration.sql
+
+# Supabase CLI cache local (project link, versions, etc)
+supabase/.temp/
+supabase/.branches/
