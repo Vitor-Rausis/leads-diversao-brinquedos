@@ -18,20 +18,35 @@ export function formatPhone(phone: string | null | undefined): string | null {
 
 export type SendResult =
   | { success: true; messageId?: string; remoteJid?: string }
-  // timeout = nao sabemos se foi entregue. NAO retentar (pode duplicar).
-  | { success: false; timeout: true; error: string }
-  | { success: false; timeout?: false; error: string };
+  // canRetry=false: nao retentar (pode ter sido entregue mesmo com erro)
+  | { success: false; canRetry: false; error: string }
+  // canRetry=true: erro definitivo (config invalida, telefone invalido). NUNCA foi entregue.
+  | { success: false; canRetry: true; error: string };
 
 // Timeout generoso: Evolution API no Fly free tier pode demorar.
-// Mais importante: se passar daqui, a msg pode ter sido entregue e nao podemos retentar.
 const SEND_TIMEOUT_MS = 60_000;
+
+// Verifica se o erro indica timeout/incerteza sobre entrega. Conservador:
+// na duvida, assume que NAO podemos retentar (preferimos perder uma msg
+// a enviar 4x duplicado).
+function isUncertainDelivery(errorMsg: string): boolean {
+  const lower = errorMsg.toLowerCase();
+  return (
+    lower.includes("timeout") ||
+    lower.includes("abort") ||
+    lower.includes("etimedout") ||
+    lower.includes("econnreset") ||
+    lower.includes("network") ||
+    lower.includes("fetch failed")
+  );
+}
 
 export async function sendText(to: string, text: string): Promise<SendResult> {
   if (!EVOLUTION_API_KEY || !EVOLUTION_API_URL) {
-    return { success: false, error: "Evolution API not configured" };
+    return { success: false, canRetry: true, error: "Evolution API not configured" };
   }
   const number = formatPhone(to);
-  if (!number) return { success: false, error: "Invalid phone number" };
+  if (!number) return { success: false, canRetry: true, error: "Invalid phone number" };
 
   try {
     const res = await fetch(
@@ -49,7 +64,18 @@ export async function sendText(to: string, text: string): Promise<SendResult> {
 
     if (!res.ok) {
       const body = await res.text();
-      return { success: false, error: `HTTP ${res.status}: ${body}` };
+      const errorMsg = `HTTP ${res.status}: ${body}`;
+
+      // 5xx ou erro com timeout no body: Evolution pode ter processado mesmo
+      // retornando erro. NAO retentar para evitar duplicacao.
+      // 4xx (exceto 408/429): erro de validacao/auth, msg nao foi entregue, pode retentar
+      //   se quisermos (mas o erro tipicamente persiste, entao retry nao adianta).
+      const isServerError = res.status >= 500;
+      const isTimeoutLike = res.status === 408 || res.status === 504;
+      const bodyHasTimeout = isUncertainDelivery(body);
+
+      const canRetry = !(isServerError || isTimeoutLike || bodyHasTimeout);
+      return { success: false, canRetry, error: errorMsg };
     }
 
     const data = await res.json();
@@ -60,12 +86,13 @@ export async function sendText(to: string, text: string): Promise<SendResult> {
     };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    // AbortSignal timeout vira "DOMException: signal is aborted due to timeout" ou similar
-    const isTimeout = msg.toLowerCase().includes("timeout") || msg.toLowerCase().includes("abort");
-    if (isTimeout) {
-      return { success: false, timeout: true, error: msg };
+    // AbortSignal timeout, fetch failed, network errors:
+    // nao sabemos se a Evolution chegou a processar. NAO retentar.
+    if (isUncertainDelivery(msg)) {
+      return { success: false, canRetry: false, error: msg };
     }
-    return { success: false, timeout: false, error: msg };
+    // Erro estrutural (typo no codigo, etc) — pode retentar
+    return { success: false, canRetry: true, error: msg };
   }
 }
 

@@ -87,17 +87,16 @@ Deno.serve(async (_req) => {
 
       sent++;
     } else {
-      // Timeout = nao sabemos se foi entregue. Marca como failed sem retry.
-      // Outros erros: reagenda em 5min se ainda ha retries.
+      // canRetry=false: incerteza de entrega. NUNCA retentar.
+      // canRetry=true: erro de validacao. Reagenda em 5min se ainda ha retries.
       const errorMsg = result.error;
-      const isTimeout = result.timeout === true;
       const exhausted = item.attempts >= item.max_attempts;
 
       const update: Record<string, unknown> = {
         error_message: errorMsg,
         sent_at: null,
       };
-      if (isTimeout || exhausted) {
+      if (!result.canRetry || exhausted) {
         update.status = "failed";
       } else {
         update.scheduled_at = new Date(Date.now() + 5 * 60 * 1000).toISOString();

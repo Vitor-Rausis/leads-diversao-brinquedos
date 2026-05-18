@@ -122,14 +122,13 @@ Deno.serve(async (_req) => {
 
       sent++;
     } else {
-      // Timeout = NAO sabemos se foi entregue. Marca como falha SEM retry para
-      // evitar enviar de novo (Evolution pode ter entregue a msg mesmo apos timeout).
-      // Outros erros: reverte para pendente se ainda ha retries.
+      // canRetry=false: incerteza de entrega (timeout, 5xx, network). NUNCA retentar.
+      // canRetry=true: erro definitivo de validacao (telefone invalido, config). Retenta
+      // ate MAX_RETRIES — mas como esse tipo de erro raramente se resolve sozinho,
+      // na pratica vira falha logo.
       const errorMsg = result.error;
-      const isTimeout = result.timeout === true;
       const exhausted = msg.tentativas >= MAX_RETRIES;
-
-      const newStatus = isTimeout || exhausted ? "falha" : "pendente";
+      const newStatus = !result.canRetry || exhausted ? "falha" : "pendente";
 
       await supabase
         .from("mensagens_agendadas")
