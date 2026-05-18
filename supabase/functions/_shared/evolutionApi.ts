@@ -18,7 +18,13 @@ export function formatPhone(phone: string | null | undefined): string | null {
 
 export type SendResult =
   | { success: true; messageId?: string; remoteJid?: string }
-  | { success: false; error: string };
+  // timeout = nao sabemos se foi entregue. NAO retentar (pode duplicar).
+  | { success: false; timeout: true; error: string }
+  | { success: false; timeout?: false; error: string };
+
+// Timeout generoso: Evolution API no Fly free tier pode demorar.
+// Mais importante: se passar daqui, a msg pode ter sido entregue e nao podemos retentar.
+const SEND_TIMEOUT_MS = 60_000;
 
 export async function sendText(to: string, text: string): Promise<SendResult> {
   if (!EVOLUTION_API_KEY || !EVOLUTION_API_URL) {
@@ -37,7 +43,7 @@ export async function sendText(to: string, text: string): Promise<SendResult> {
           apikey: EVOLUTION_API_KEY,
         },
         body: JSON.stringify({ number, text }),
-        signal: AbortSignal.timeout(15_000),
+        signal: AbortSignal.timeout(SEND_TIMEOUT_MS),
       }
     );
 
@@ -54,7 +60,12 @@ export async function sendText(to: string, text: string): Promise<SendResult> {
     };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    return { success: false, error: msg };
+    // AbortSignal timeout vira "DOMException: signal is aborted due to timeout" ou similar
+    const isTimeout = msg.toLowerCase().includes("timeout") || msg.toLowerCase().includes("abort");
+    if (isTimeout) {
+      return { success: false, timeout: true, error: msg };
+    }
+    return { success: false, timeout: false, error: msg };
   }
 }
 

@@ -140,12 +140,18 @@ Deno.serve(async (_req) => {
 
       sent++;
     } else {
-      // Reverte o claim: volta para 'pendente' (ou marca 'falha' se esgotou retries)
+      // Timeout = NAO sabemos se foi entregue. Marca como falha SEM retry para
+      // evitar enviar de novo (Evolution pode ter entregue a msg mesmo apos timeout).
+      // Outros erros (erro HTTP, JSON invalido, etc) reverte para pendente se ainda
+      // tem retries disponiveis.
       const errorMsg = result.error;
+      const finalStatus =
+        result.timeout === true || novaTentativa >= MAX_RETRIES ? "falha" : "pendente";
+
       await supabase
         .from("mensagens_agendadas")
         .update({
-          status: novaTentativa >= MAX_RETRIES ? "falha" : "pendente",
+          status: finalStatus,
           erro_detalhe: JSON.stringify(errorMsg),
         })
         .eq("id", msg.id);

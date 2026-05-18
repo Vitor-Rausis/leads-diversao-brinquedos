@@ -97,9 +97,11 @@ Deno.serve(async (_req) => {
 
       sent++;
     } else {
+      // Timeout = NAO sabemos se foi entregue. Marca como failed SEM retry.
+      // Outros erros: reagenda em 5min se ainda tem retries.
       const errorMsg = result.error;
       const update: Record<string, unknown> = { error_message: errorMsg };
-      if (novaTentativa >= item.max_attempts) {
+      if (result.timeout === true || novaTentativa >= item.max_attempts) {
         update.status = "failed";
       } else {
         update.scheduled_at = new Date(Date.now() + 5 * 60 * 1000).toISOString();
