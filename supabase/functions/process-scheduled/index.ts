@@ -1,6 +1,9 @@
 // Edge Function: processa mensagens_agendadas pendentes e envia via Evolution API.
 // Disparada por pg_cron a cada 1 minuto.
-// Substitui backend/src/jobs/whatsappJobs.js -> processScheduledMessages
+//
+// Concorrencia: o claim acontece dentro de claim_pending_messages (funcao SQL)
+// usando FOR UPDATE SKIP LOCKED. Garantia absoluta de que duas execucoes
+// concorrentes nunca pegam a mesma linha.
 
 import { supabase } from "../_shared/supabase.ts";
 import { sendText } from "../_shared/evolutionApi.ts";
@@ -19,14 +22,11 @@ const DEFAULT_TEMPLATES: Record<string, string> = {
 Deno.serve(async (_req) => {
   const start = Date.now();
 
-  const { data: messages, error } = await supabase
-    .from("mensagens_agendadas")
-    .select(
-      "id, tipo, conteudo_custom, forcar_envio, data_agendada, tentativas, leads!inner(id, nome, whatsapp, status)"
-    )
-    .eq("status", "pendente")
-    .lte("data_agendada", new Date().toISOString())
-    .limit(50);
+  // Claim atomico via funcao SQL com FOR UPDATE SKIP LOCKED.
+  // Linhas retornadas ja tem status='enviada' (com enviada_em=NULL).
+  const { data: messages, error } = await supabase.rpc("claim_pending_messages", {
+    p_limit: 50,
+  });
 
   if (error) {
     return new Response(JSON.stringify({ ok: false, error: error.message }), {
@@ -37,11 +37,12 @@ Deno.serve(async (_req) => {
 
   if (!messages || messages.length === 0) {
     return new Response(
-      JSON.stringify({ ok: true, sent: 0, failed: 0, skipped: 0, duration_ms: Date.now() - start }),
+      JSON.stringify({ ok: true, sent: 0, failed: 0, cancelled: 0, duration_ms: Date.now() - start }),
       { headers: { "Content-Type": "application/json" } }
     );
   }
 
+  // Busca templates uma vez
   const { data: templates } = await supabase
     .from("templates_mensagem")
     .select("tipo, conteudo")
@@ -52,66 +53,45 @@ Deno.serve(async (_req) => {
 
   let sent = 0;
   let failed = 0;
-  let skipped = 0;
+  let cancelled = 0;
 
   for (const msg of messages) {
-    const lead = (msg as any).leads;
-
+    // Regras de cancelamento: lead Convertido/Perdido nao recebe dia_3/dia_7
+    // (mes_10 sempre envia; forcar_envio bypassa)
     if (
       !msg.forcar_envio &&
       msg.tipo !== "mes_10" &&
-      ["Perdido", "Convertido"].includes(lead.status)
+      ["Perdido", "Convertido"].includes(msg.lead_status)
     ) {
       await supabase
         .from("mensagens_agendadas")
-        .update({ status: "cancelada" })
-        .eq("id", msg.id)
-        .eq("status", "pendente");
+        .update({ status: "cancelada", enviada_em: null })
+        .eq("id", msg.id);
+      cancelled++;
       continue;
     }
 
-    // Resolve texto ANTES do claim. Se faltar template, pula sem claimar
-    // (caso contrario tentativas ficaria incrementada e mensagem nunca seria reenviada).
+    // Resolve texto
     let text: string;
     if (msg.conteudo_custom) {
-      text = msg.conteudo_custom.replace(/\{\{nome\}\}/g, lead.nome);
+      text = msg.conteudo_custom.replace(/\{\{nome\}\}/g, msg.lead_nome);
     } else {
       const template = templateMap[msg.tipo] ?? DEFAULT_TEMPLATES[msg.tipo];
-      if (!template) continue;
-      text = template.replace(/\{\{nome\}\}/g, lead.nome);
+      if (!template) {
+        // Sem template e sem conteudo - reverte para pendente sem perder retry
+        await supabase
+          .from("mensagens_agendadas")
+          .update({
+            status: "pendente",
+            tentativas: msg.tentativas - 1, // desfaz incremento do claim
+          })
+          .eq("id", msg.id);
+        continue;
+      }
+      text = template.replace(/\{\{nome\}\}/g, msg.lead_nome);
     }
 
-    // Claim atomico: muda status para 'enviada' IMEDIATAMENTE (com enviada_em=NULL como
-    // sentinela "em processamento"). Isso garante que SELECT WHERE status='pendente' de
-    // execucoes concorrentes nao pegue esta linha. Se sendText falhar, revertemos.
-    //
-    // Por que nao bastava o claim anterior (so incrementando tentativas):
-    // a query do SELECT filtra apenas por status='pendente', nao por tentativas.
-    // Execucoes paralelas viam a mesma linha como pendente mesmo com tentativas
-    // incrementadas, e o segundo claim (com WHERE tentativas=novo_valor) tambem
-    // passava, resultando em envio duplo.
-    const novaTentativa = msg.tentativas + 1;
-    const { data: claimed, error: claimErr } = await supabase
-      .from("mensagens_agendadas")
-      .update({
-        status: "enviada",
-        tentativas: novaTentativa,
-        enviada_em: null, // sentinela: claimed mas ainda nao enviada de verdade
-      })
-      .eq("id", msg.id)
-      .eq("status", "pendente")
-      .select("id");
-
-    if (claimErr) {
-      console.error(`claim error ${msg.id}:`, claimErr.message);
-      continue;
-    }
-    if (!claimed || claimed.length === 0) {
-      skipped++;
-      continue;
-    }
-
-    const result = await sendText(lead.whatsapp, text);
+    const result = await sendText(msg.lead_whatsapp, text);
 
     if (result.success === true) {
       // Confirma envio: marca enviada_em (status ja era 'enviada' do claim)
@@ -121,37 +101,41 @@ Deno.serve(async (_req) => {
         .eq("id", msg.id);
 
       await supabase.from("mensagens_log").insert({
-        lead_id: lead.id,
-        whatsapp: lead.whatsapp,
+        lead_id: msg.lead_id,
+        whatsapp: msg.lead_whatsapp,
         direcao: "enviada",
         conteudo: text,
         mensagem_agendada_id: msg.id,
         metadata: { messageId: result.messageId },
       });
 
+      // Atualiza atualizado_em do lead (usado pelo alerta "Esquecido")
+      // Se ainda era Novo, avanca para Em Contato
       await supabase
         .from("leads")
         .update(
-          lead.status === "Novo"
+          msg.lead_status === "Novo"
             ? { status: "Em Contato" }
             : { atualizado_em: new Date().toISOString() }
         )
-        .eq("id", lead.id);
+        .eq("id", msg.lead_id);
 
       sent++;
     } else {
       // Timeout = NAO sabemos se foi entregue. Marca como falha SEM retry para
       // evitar enviar de novo (Evolution pode ter entregue a msg mesmo apos timeout).
-      // Outros erros (erro HTTP, JSON invalido, etc) reverte para pendente se ainda
-      // tem retries disponiveis.
+      // Outros erros: reverte para pendente se ainda ha retries.
       const errorMsg = result.error;
-      const finalStatus =
-        result.timeout === true || novaTentativa >= MAX_RETRIES ? "falha" : "pendente";
+      const isTimeout = result.timeout === true;
+      const exhausted = msg.tentativas >= MAX_RETRIES;
+
+      const newStatus = isTimeout || exhausted ? "falha" : "pendente";
 
       await supabase
         .from("mensagens_agendadas")
         .update({
-          status: finalStatus,
+          status: newStatus,
+          enviada_em: null,
           erro_detalhe: JSON.stringify(errorMsg),
         })
         .eq("id", msg.id);
@@ -160,7 +144,7 @@ Deno.serve(async (_req) => {
   }
 
   return new Response(
-    JSON.stringify({ ok: true, sent, failed, skipped, duration_ms: Date.now() - start }),
+    JSON.stringify({ ok: true, sent, failed, cancelled, duration_ms: Date.now() - start }),
     { headers: { "Content-Type": "application/json" } }
   );
 });

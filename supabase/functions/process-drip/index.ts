@@ -1,11 +1,17 @@
 // Edge Function: processa drip_queue.
 // Disparada por pg_cron a cada 1 minuto.
-// Substitui backend/src/services/dripService.js -> processQueue
+//
+// Concorrencia: claim via claim_pending_drip (FOR UPDATE SKIP LOCKED).
+// Garantia absoluta contra envio duplicado.
 
 import { supabase } from "../_shared/supabase.ts";
 import { sendText } from "../_shared/evolutionApi.ts";
 
-function resolveTemplate(template: string, lead: any): string {
+function resolveTemplate(template: string, lead: {
+  nome: string;
+  whatsapp: string;
+  origem: string;
+}): string {
   if (!template) return "";
   return template
     .replace(/\{\{nome\}\}/g, lead.nome || "")
@@ -20,15 +26,10 @@ function resolveTemplate(template: string, lead: any): string {
 
 Deno.serve(async (_req) => {
   const start = Date.now();
-  const now = new Date().toISOString();
 
-  const { data: pending, error } = await supabase
-    .from("drip_queue")
-    .select("*, lead:leads(*), step:drip_steps(*)")
-    .eq("status", "pending")
-    .lte("scheduled_at", now)
-    .order("scheduled_at", { ascending: true })
-    .limit(50);
+  const { data: items, error } = await supabase.rpc("claim_pending_drip", {
+    p_limit: 50,
+  });
 
   if (error) {
     return new Response(JSON.stringify({ ok: false, error: error.message }), {
@@ -37,48 +38,37 @@ Deno.serve(async (_req) => {
     });
   }
 
-  if (!pending || pending.length === 0) {
+  if (!items || items.length === 0) {
     return new Response(
-      JSON.stringify({ ok: true, sent: 0, failed: 0, skipped: 0, duration_ms: Date.now() - start }),
+      JSON.stringify({ ok: true, sent: 0, failed: 0, cancelled: 0, duration_ms: Date.now() - start }),
       { headers: { "Content-Type": "application/json" } }
     );
   }
 
   let sent = 0;
   let failed = 0;
-  let skipped = 0;
+  let cancelled = 0;
 
-  for (const item of pending) {
-    if (["Convertido", "Perdido"].includes((item as any).lead?.status)) {
-      await supabase.from("drip_queue").update({ status: "cancelled" }).eq("id", item.id);
+  for (const item of items) {
+    // Lead convertido/perdido: cancela ao inves de enviar
+    if (["Convertido", "Perdido"].includes(item.lead_status)) {
+      await supabase
+        .from("drip_queue")
+        .update({ status: "cancelled", sent_at: null })
+        .eq("id", item.id);
+      cancelled++;
       continue;
     }
 
-    // Claim atomico: muda status para 'sent' IMEDIATAMENTE (com sent_at=NULL como
-    // sentinela "em processamento"). Garante que SELECT WHERE status='pending' de
-    // execucoes concorrentes nao pegue esta linha. Se sendText falhar, revertemos.
-    const novaTentativa = item.attempts + 1;
-    const { data: claimed } = await supabase
-      .from("drip_queue")
-      .update({
-        status: "sent",
-        attempts: novaTentativa,
-        sent_at: null,
-      })
-      .eq("id", item.id)
-      .eq("status", "pending")
-      .select("id");
+    const message = resolveTemplate(item.message_template, {
+      nome: item.lead_nome,
+      whatsapp: item.lead_whatsapp,
+      origem: item.lead_origem,
+    });
 
-    if (!claimed || claimed.length === 0) {
-      skipped++;
-      continue;
-    }
-
-    const message = resolveTemplate((item as any).step.message_template, (item as any).lead);
-    const result = await sendText((item as any).lead.whatsapp, message);
+    const result = await sendText(item.lead_whatsapp, message);
 
     if (result.success === true) {
-      // Confirma envio: marca sent_at e message_id (status ja era 'sent')
       await supabase
         .from("drip_queue")
         .update({
@@ -88,8 +78,8 @@ Deno.serve(async (_req) => {
         .eq("id", item.id);
 
       await supabase.from("mensagens_log").insert({
-        lead_id: (item as any).lead.id,
-        whatsapp: (item as any).lead.whatsapp,
+        lead_id: item.lead_id,
+        whatsapp: item.lead_whatsapp,
         direcao: "enviada",
         conteudo: message,
         metadata: { drip_step_id: item.drip_step_id, campaign_id: item.campaign_id },
@@ -97,26 +87,29 @@ Deno.serve(async (_req) => {
 
       sent++;
     } else {
-      // Timeout = NAO sabemos se foi entregue. Marca como failed SEM retry.
-      // Outros erros: reagenda em 5min se ainda tem retries.
+      // Timeout = nao sabemos se foi entregue. Marca como failed sem retry.
+      // Outros erros: reagenda em 5min se ainda ha retries.
       const errorMsg = result.error;
-      const update: Record<string, unknown> = { error_message: errorMsg };
-      if (result.timeout === true || novaTentativa >= item.max_attempts) {
+      const isTimeout = result.timeout === true;
+      const exhausted = item.attempts >= item.max_attempts;
+
+      const update: Record<string, unknown> = {
+        error_message: errorMsg,
+        sent_at: null,
+      };
+      if (isTimeout || exhausted) {
         update.status = "failed";
       } else {
         update.scheduled_at = new Date(Date.now() + 5 * 60 * 1000).toISOString();
-        update.status = "pending"; // reagenda
+        update.status = "pending";
       }
       await supabase.from("drip_queue").update(update).eq("id", item.id);
       failed++;
     }
-
-    // Delay 2s entre envios para evitar bloqueio do WhatsApp
-    await new Promise((r) => setTimeout(r, 2000));
   }
 
   return new Response(
-    JSON.stringify({ ok: true, sent, failed, skipped, duration_ms: Date.now() - start }),
+    JSON.stringify({ ok: true, sent, failed, cancelled, duration_ms: Date.now() - start }),
     { headers: { "Content-Type": "application/json" } }
   );
 });
