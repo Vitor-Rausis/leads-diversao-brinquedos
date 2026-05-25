@@ -3,12 +3,22 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Phone, Calendar, Tag, MessageSquare, Clock, Plus, Pencil, X } from 'lucide-react';
 import { getLead } from '../api/leadApi';
 import { cancelScheduledMessage } from '../api/messageApi';
+import { configApi } from '../api/configApi';
 import Badge from '../components/ui/Badge';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Spinner from '../components/ui/Spinner';
 import ScheduleMessageModal from '../components/messages/ScheduleMessageModal';
 import { format } from 'date-fns';
+
+function formatDelay(dias) {
+  if (dias == null) return '';
+  if (dias >= 30) {
+    const meses = Math.round(dias / 30);
+    return meses === 1 ? '1 mês' : `${meses} meses`;
+  }
+  return dias === 1 ? '1 dia' : `${dias} dias`;
+}
 
 export default function LeadDetailPage() {
   const { id } = useParams();
@@ -17,10 +27,21 @@ export default function LeadDetailPage() {
   const [loading, setLoading] = useState(true);
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [editingMsg, setEditingMsg] = useState(null);
+  const [scheduleConfig, setScheduleConfig] = useState({});
 
   useEffect(() => {
     loadLead();
   }, [id]);
+
+  useEffect(() => {
+    configApi.getSchedule()
+      .then((res) => {
+        const map = {};
+        for (const c of res.data || []) map[c.tipo] = c.dias;
+        setScheduleConfig(map);
+      })
+      .catch((err) => console.error('Erro ao carregar config:', err));
+  }, []);
 
   const loadLead = async () => {
     try {
@@ -127,9 +148,7 @@ export default function LeadDetailPage() {
                     <p className="text-sm font-medium text-gray-700">
                       {msg.conteudo_custom
                         ? <span className="truncate block" title={msg.conteudo_custom}>{msg.conteudo_custom.length > 60 ? msg.conteudo_custom.substring(0, 60) + '…' : msg.conteudo_custom}</span>
-                        : msg.tipo === 'dia_3' ? 'Mensagem 3 dias'
-                        : msg.tipo === 'dia_7' ? 'Mensagem 7 dias'
-                        : 'Mensagem 10 meses'
+                        : `Mensagem ${formatDelay(scheduleConfig[msg.tipo])}`
                       }
                     </p>
                     <p className="text-xs text-gray-500 mt-0.5">

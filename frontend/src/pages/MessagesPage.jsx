@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getMessages, getScheduledMessages, cancelScheduledMessage } from '../api/messageApi';
+import { configApi } from '../api/configApi';
 import { format } from 'date-fns';
 import { Send, Inbox, Clock, X, CalendarPlus } from 'lucide-react';
 import Card from '../components/ui/Card';
@@ -10,6 +11,16 @@ import Spinner from '../components/ui/Spinner';
 import EmptyState from '../components/ui/EmptyState';
 import BulkScheduleModal from '../components/messages/BulkScheduleModal';
 
+// Formata "dias" da config em label amigavel: 1 dia / 4 dias / 300 dias -> "10 meses"
+function formatDelay(dias) {
+  if (dias == null) return '-';
+  if (dias >= 30) {
+    const meses = Math.round(dias / 30);
+    return meses === 1 ? '1 mês' : `${meses} meses`;
+  }
+  return dias === 1 ? '1 dia' : `${dias} dias`;
+}
+
 export default function MessagesPage() {
   const [tab, setTab] = useState('log');
   const [messages, setMessages] = useState([]);
@@ -19,10 +30,22 @@ export default function MessagesPage() {
   const [scheduledStatus, setScheduledStatus] = useState('');
   const [loading, setLoading] = useState(true);
   const [showBulkModal, setShowBulkModal] = useState(false);
+  const [scheduleConfig, setScheduleConfig] = useState({}); // { dia_3: 1, dia_7: 4, mes_10: 300 }
 
   useEffect(() => {
     loadMessages();
   }, [tab, page, direcao, scheduledStatus]);
+
+  // Carrega config de dias uma vez (usado para mostrar "1 dia / 4 dias" dinamicamente)
+  useEffect(() => {
+    configApi.getSchedule()
+      .then((res) => {
+        const map = {};
+        for (const c of res.data || []) map[c.tipo] = c.dias;
+        setScheduleConfig(map);
+      })
+      .catch((err) => console.error('Erro ao carregar config:', err));
+  }, []);
 
   const handleCancel = async (id) => {
     if (!window.confirm('Cancelar esta mensagem agendada?')) return;
@@ -200,11 +223,7 @@ export default function MessagesPage() {
                       {msg.forcar_envio ? (
                         <span className="text-primary-600 font-medium">Manual</span>
                       ) : (
-                        <>
-                          {msg.tipo === 'dia_3' && '3 dias'}
-                          {msg.tipo === 'dia_7' && '7 dias'}
-                          {msg.tipo === 'mes_10' && '10 meses'}
-                        </>
+                        formatDelay(scheduleConfig[msg.tipo])
                       )}
                     </td>
                     <td className="px-4 py-3 text-gray-500 text-xs">
