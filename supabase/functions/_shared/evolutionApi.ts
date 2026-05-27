@@ -96,10 +96,14 @@ export async function sendText(to: string, text: string): Promise<SendResult> {
   }
 }
 
-export async function findMessages(limit = 20) {
+export async function findMessages(limit = 50) {
   if (!EVOLUTION_API_KEY || !EVOLUTION_API_URL) {
     return { records: [] as any[] };
   }
+  // IMPORTANTE: a Evolution pode ter dezenas de milhares de mensagens. Sem ordenacao,
+  // retorna as MAIS ANTIGAS (inutil). Pedimos ordenado por messageTimestamp DESC para
+  // pegar as mais recentes. O filtro fromMe:false nem sempre e respeitado, entao
+  // tambem filtramos no poll-messages pelo campo direto.
   const res = await fetch(
     `${EVOLUTION_API_URL}/chat/findMessages/${EVOLUTION_INSTANCE}`,
     {
@@ -108,7 +112,11 @@ export async function findMessages(limit = 20) {
         "Content-Type": "application/json",
         apikey: EVOLUTION_API_KEY,
       },
-      body: JSON.stringify({ where: { key: { fromMe: false } }, limit }),
+      body: JSON.stringify({
+        where: { key: { fromMe: false } },
+        limit,
+        sort: { messageTimestamp: -1 },
+      }),
       signal: AbortSignal.timeout(10_000),
     }
   );
